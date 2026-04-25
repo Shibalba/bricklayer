@@ -275,6 +275,7 @@ func remove_brick():
 		# result.collider is the Brick node we hit
 		# We check if it's NOT the floor (we don't want to delete the floor!)
 		if result.collider.name != "Floor":
+			anim_player.play("remove_brick")
 			var sfx = AudioStreamPlayer.new()
 			sfx.stream = remove_sfx
 			sfx.volume_db = remove_volume_db
