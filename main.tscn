@@ -178,6 +178,24 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, -9)
 [node name="BirchTreeD" parent="." unique_id=252883719 instance=ExtResource("5_2d8qk")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0, -12)
 
+[node name="BirchTreeE" parent="." unique_id=300000001 instance=ExtResource("5_2d8qk")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, 3)
+
+[node name="BirchTreeF" parent="." unique_id=300000002 instance=ExtResource("5_2d8qk")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, 15)
+
+[node name="BirchTreeG" parent="." unique_id=300000003 instance=ExtResource("5_2d8qk")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, -20)
+
+[node name="BirchTreeH" parent="." unique_id=300000004 instance=ExtResource("5_2d8qk")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, -18)
+
+[node name="BirchTreeI" parent="." unique_id=300000005 instance=ExtResource("5_2d8qk")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, 0, -14)
+
+[node name="BirchTreeJ" parent="." unique_id=300000006 instance=ExtResource("5_2d8qk")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0, -5)
+
 [node name="Player" type="CharacterBody3D" parent="." unique_id=1941755123]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
 script = ExtResource("1_ig7tw")

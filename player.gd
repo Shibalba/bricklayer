@@ -7,6 +7,7 @@ extends CharacterBody3D
 @export var build_range: float = 2.0
 @export var place_volume_db: float = -16.0
 @export var remove_volume_db: float = -12.0
+@export var hit_volume_db: float = -22.0
 @export var footstep_interval: float = 0.32
 @export var footstep_volume_db: float = -14.0
 @export var footstep_pitch_min: float = 0.92
@@ -44,6 +45,9 @@ const SPEED = 5.0
 const JUMP_VELOCITY = 4.5
 const BRICK_SIZE = 0.5
 const HALF_BRICK = BRICK_SIZE * 0.5
+const HIT_INTERVAL: float = 0.3
+var hit_timer: float = 0.0
+var current_hit_target: Node = null
 var footstep_timer: float = 0.0
 var footstep_player: AudioStreamPlayer
 var footstep_sfx_list: Array[AudioStream] = []
@@ -58,6 +62,42 @@ func _snap_to_grid(pos: Vector3) -> Vector3:
 		round(pos.y / BRICK_SIZE) * BRICK_SIZE,
 		round(pos.z / BRICK_SIZE) * BRICK_SIZE
 	)
+
+
+func _get_max_hp(target: Node) -> int:
+	if target.has_meta("block_type"):
+		return 4 if target.get_meta("block_type") == "wood" else 2
+	if target.is_in_group("wood"):
+		return 4
+	if target.is_in_group("ground_block"):
+		return 2
+	return 1
+
+
+func _ensure_hp(target: Node) -> void:
+	if not target.has_meta("hp"):
+		var max_hp = _get_max_hp(target)
+		target.set_meta("hp", max_hp)
+		target.set_meta("max_hp", max_hp)
+
+
+func _apply_damage_tint(target: Node, hp: int, max_hp: int) -> void:
+	var mesh = target.find_child("MeshInstance3D", true, false)
+	if not mesh:
+		return
+	var base_color: Color
+	if target.has_meta("block_type"):
+		base_color = Color(0.72, 0.52, 0.30) if target.get_meta("block_type") == "wood" else Color(0.42, 0.28, 0.12)
+	elif target.is_in_group("wood"):
+		base_color = Color(0.93, 0.91, 0.85)
+	else:
+		base_color = Color(0.4, 0.7, 0.25)
+	var damage_frac = 1.0 - float(hp) / float(max_hp)
+	var tinted = base_color.darkened(damage_frac * 0.6)
+	var mat = StandardMaterial3D.new()
+	mat.albedo_color = tinted
+	mat.roughness = 1.0
+	mesh.material_override = mat
 
 
 func add_to_inventory(block_type: String) -> bool:
@@ -127,9 +167,6 @@ func _unhandled_input(event):
 		# Rotate ONLY the head up/down
 		$Head.rotate_x(-event.relative.y * mouse_sensitivity)
 		$Head.rotation.x = clamp($Head.rotation.x, -deg_to_rad(80), deg_to_rad(80))
-
-	if event.is_action_pressed("left_click"):
-		remove_block()
 
 	if event.is_action_pressed("right_click"):
 		place_block()
@@ -201,6 +238,7 @@ func _physics_process(delta: float) -> void:
 		was_on_floor_last_frame = false
 
 	_update_footsteps(delta)
+	_process_mining(delta)
 	update_preview()
 
 
@@ -312,16 +350,23 @@ func place_block():
 		var new_brick = brick_scene.instantiate()
 		bricks_folder.add_child(new_brick)
 		new_brick.global_position = snapped_pos
-		new_brick.set_meta("block_type", block_type)
 
-		# Apply material by block type
+		# Set meta on StaticBody3D child "Brick", not root Node3D,
+		# so result.collider.has_meta("block_type") works correctly on removal
+		var brick_body = new_brick.get_node("Brick")
+		var max_hp: int = 4 if block_type == "wood" else 2
+		brick_body.set_meta("block_type", block_type)
+		brick_body.set_meta("hp", max_hp)
+		brick_body.set_meta("max_hp", max_hp)
+
+		# Apply material by block type (brown tints)
 		var mesh = new_brick.find_child("MeshInstance3D")
 		if mesh:
 			var new_mat = StandardMaterial3D.new()
 			if block_type == "wood":
-				new_mat.albedo_color = Color(0.93, 0.91, 0.85)
+				new_mat.albedo_color = Color(0.72, 0.52, 0.30)
 			else: # ground_block
-				new_mat.albedo_color = Color(0.4, 0.7, 0.25)
+				new_mat.albedo_color = Color(0.42, 0.28, 0.12)
 			new_mat.roughness = 1.0
 			mesh.material_override = new_mat
 
@@ -339,24 +384,60 @@ func place_block():
 
 
 func remove_block():
+	pass
+
+
+func _process_mining(delta: float) -> void:
+	if get_tree().paused:
+		return
+
+	if not Input.is_action_pressed("left_click"):
+		hit_timer = 0.0
+		current_hit_target = null
+		return
+
 	var space_state = get_world_3d().direct_space_state
 	var from = camera.global_transform.origin
 	var to = from + (-camera.global_transform.basis.z * build_range)
 	var query = PhysicsRayQueryParameters3D.create(from, to)
 	query.exclude = [self.get_rid()]
-
 	var result = space_state.intersect_ray(query)
 
-	if result:
-		# Return block to inventory if it has a type tag (i.e. was placed by player)
-		if result.collider.has_meta("block_type"):
-			var block_type: String = result.collider.get_meta("block_type")
-			add_to_inventory(block_type)
-		elif result.collider.is_in_group("wood"):
-			add_to_inventory("wood")
-		elif result.collider.is_in_group("ground_block"):
-			add_to_inventory("ground_block")
+	if not result:
+		hit_timer = 0.0
+		current_hit_target = null
+		return
 
+	var target = result.collider
+	var is_interactable = target.has_meta("block_type") or target.is_in_group("wood") or target.is_in_group("ground_block")
+	if not is_interactable:
+		hit_timer = 0.0
+		current_hit_target = null
+		return
+
+	# Switching target resets progress
+	if target != current_hit_target:
+		current_hit_target = target
+		hit_timer = HIT_INTERVAL
+		return
+
+	hit_timer -= delta
+	if hit_timer > 0.0:
+		return
+	hit_timer = HIT_INTERVAL
+
+	_ensure_hp(target)
+	var hp: int = target.get_meta("hp") - 1
+	target.set_meta("hp", hp)
+
+	if hp <= 0:
+		# Block broken — add to inventory
+		if target.has_meta("block_type"):
+			add_to_inventory(target.get_meta("block_type"))
+		elif target.is_in_group("wood"):
+			add_to_inventory("wood")
+		elif target.is_in_group("ground_block"):
+			add_to_inventory("ground_block")
 		anim_player.play("remove_brick")
 		var sfx = AudioStreamPlayer.new()
 		sfx.stream = remove_sfx
@@ -364,7 +445,18 @@ func remove_block():
 		get_tree().root.add_child(sfx)
 		sfx.play()
 		sfx.finished.connect(sfx.queue_free)
-		result.collider.queue_free()
+		target.queue_free()
+		current_hit_target = null
+	else:
+		# Hit but not broken — tint and play lighter sound
+		_apply_damage_tint(target, hp, target.get_meta("max_hp"))
+		anim_player.play("remove_brick")
+		var sfx = AudioStreamPlayer.new()
+		sfx.stream = remove_sfx
+		sfx.volume_db = hit_volume_db
+		get_tree().root.add_child(sfx)
+		sfx.play()
+		sfx.finished.connect(sfx.queue_free)
 
 
 func _on_back_button_pressed() -> void:
