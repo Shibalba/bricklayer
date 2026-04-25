@@ -12,6 +12,7 @@ extends CharacterBody3D
 @export var footstep_pitch_min: float = 0.92
 @export var footstep_pitch_max: float = 1.08
 @export var jump_volume_db: float = -10.0
+@export var landing_volume_db: float = -9.0
 var color_index: int = 0
 
 @onready var camera = $Head/Camera3D
@@ -24,6 +25,7 @@ var color_index: int = 0
 @onready var footstep_sfx_d = preload("res://Steps_gravel-006.ogg")
 @onready var footstep_sfx_a = preload("res://Steps_gravel-017.ogg")
 @onready var footstep_sfx_b = preload("res://Steps_gravel-018.ogg")
+@onready var landing_sfx = preload("res://Steps_gravel-019.ogg")
 @onready var jump_sfx = preload("res://Steps_gravel-021.ogg")
 @onready var anim_player = $AnimationPlayer
 
@@ -42,6 +44,8 @@ var footstep_timer: float = 0.0
 var footstep_player: AudioStreamPlayer
 var footstep_sfx_list: Array[AudioStream] = []
 var last_footstep_index: int = -1
+var was_on_floor_last_frame: bool = false
+var airborne_time: float = 0.0
 
 
 func _snap_to_grid(pos: Vector3) -> Vector3:
@@ -58,6 +62,7 @@ func _ready():
 	footstep_player = AudioStreamPlayer.new()
 	footstep_player.volume_db = footstep_volume_db
 	add_child(footstep_player)
+	was_on_floor_last_frame = is_on_floor()
 
 
 func _input(event: InputEvent) -> void:
@@ -121,6 +126,8 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = JUMP_VELOCITY
 		_play_jump_sound()
+		was_on_floor_last_frame = false
+		airborne_time = 0.0
 
 	# --- GAMEPAD CAMERA LOOK ---
 	# Poll analog stick input for camera control (frame-rate independent)
@@ -144,6 +151,16 @@ func _physics_process(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, 0, SPEED)
 
 	move_and_slide()
+
+	if is_on_floor():
+		if not was_on_floor_last_frame and airborne_time > 0.06:
+			_play_landing_sound()
+		airborne_time = 0.0
+		was_on_floor_last_frame = true
+	else:
+		airborne_time += delta
+		was_on_floor_last_frame = false
+
 	_update_footsteps(delta)
 	update_preview()
 
@@ -189,6 +206,15 @@ func _play_jump_sound() -> void:
 	var sfx = AudioStreamPlayer.new()
 	sfx.stream = jump_sfx
 	sfx.volume_db = jump_volume_db
+	add_child(sfx)
+	sfx.play()
+	sfx.finished.connect(sfx.queue_free)
+
+
+func _play_landing_sound() -> void:
+	var sfx = AudioStreamPlayer.new()
+	sfx.stream = landing_sfx
+	sfx.volume_db = landing_volume_db
 	add_child(sfx)
 	sfx.play()
 	sfx.finished.connect(sfx.queue_free)
