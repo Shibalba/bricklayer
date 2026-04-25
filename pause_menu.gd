@@ -13,6 +13,8 @@ var resolutions: Dictionary = {
 @onready var settings_page = $SettingsPage
 @onready var continue_button = $MainButtons/ContinueButton
 @onready var settings_button = $MainButtons/SettingsButton
+@onready var controls_button = $MainButtons/ControlsButton
+@onready var controls_overlay = get_parent().get_node("ControlsOverlay")
 
 func _ready():
 	hide()
@@ -58,7 +60,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 	if event.is_action_pressed("menu_back"):
-		if settings_page.visible:
+		if controls_overlay and controls_overlay.visible:
+			controls_overlay.visible = false
+			main_buttons.show()
+			controls_button.grab_focus()
+		elif settings_page.visible:
 			_on_back_button_pressed()
 		else:
 			toggle_pause()
@@ -80,12 +86,22 @@ func _on_fps_selected(index: int):
 
 func _on_settings_button_pressed():
 	# Hide the main menu, show settings
+	if controls_overlay:
+		controls_overlay.visible = false
 	main_buttons.hide()
 	settings_page.show()
 	res_button.grab_focus()
 
+func _on_controls_button_pressed():
+	settings_page.hide()
+	main_buttons.hide()
+	if controls_overlay:
+		controls_overlay.visible = true
+
 func _on_back_button_pressed():
 	# Hide settings, show main menu
+	if controls_overlay:
+		controls_overlay.visible = false
 	settings_page.hide()
 	main_buttons.show()
 	settings_button.grab_focus()
@@ -117,11 +133,15 @@ func toggle_pause(show_mouse_cursor: bool = true):
 	
 	if new_pause_state:
 		# Reset to show main buttons every time we open the menu
+		if controls_overlay:
+			controls_overlay.visible = false
 		main_buttons.show()
 		settings_page.hide()
 		continue_button.grab_focus()
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if show_mouse_cursor else Input.MOUSE_MODE_CAPTURED
 	else:
+		if controls_overlay:
+			controls_overlay.visible = false
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 # --- Button Connections ---

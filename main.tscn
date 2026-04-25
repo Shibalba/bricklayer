@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://dk8pns77uwlff" path="res://player.gd" id="1_ig7tw"]
 [ext_resource type="Texture2D" uid="uid://buabfdshtghnl" path="res://Terrain12_img.jpg" id="2_1bvp3"]
 [ext_resource type="Script" uid="uid://505lvloaswbs" path="res://pause_menu.gd" id="3_h2yge"]
+[ext_resource type="Script" path="res://controls_overlay.gd" id="4_1x8sf"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_0xm2m"]
 
@@ -180,6 +181,83 @@ grow_vertical = 2
 color = Color(0, 0, 0, 0.5)
 script = ExtResource("3_h2yge")
 
+[node name="ControlsOverlay" type="ColorRect" parent="CanvasLayer"]
+visible = false
+process_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.65)
+script = ExtResource("4_1x8sf")
+
+[node name="Panel" type="PanelContainer" parent="CanvasLayer/ControlsOverlay"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -360.0
+offset_top = -220.0
+offset_right = 360.0
+offset_bottom = 220.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="CanvasLayer/ControlsOverlay/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="Content" type="VBoxContainer" parent="CanvasLayer/ControlsOverlay/Panel/Margin"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "Controls"
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content"]
+layout_mode = 2
+text = "Press F1 to close"
+horizontal_alignment = 1
+
+[node name="Columns" type="HBoxContainer" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="KeyboardColumn" type="VBoxContainer" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="KeyboardTitle" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns/KeyboardColumn"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Mouse + Keyboard"
+
+[node name="KeyboardText" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns/KeyboardColumn"]
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="GamepadColumn" type="VBoxContainer" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="GamepadTitle" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns/GamepadColumn"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Gamepad"
+
+[node name="GamepadText" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns/GamepadColumn"]
+layout_mode = 2
+autowrap_mode = 3
+
 [node name="MainButtons" type="VBoxContainer" parent="CanvasLayer/PauseMenu" unique_id=1117693403]
 layout_mode = 1
 anchors_preset = 8
@@ -201,6 +279,10 @@ text = "Continue"
 [node name="SettingsButton" type="Button" parent="CanvasLayer/PauseMenu/MainButtons" unique_id=2031141617]
 layout_mode = 2
 text = "Settings"
+
+[node name="ControlsButton" type="Button" parent="CanvasLayer/PauseMenu/MainButtons"]
+layout_mode = 2
+text = "Controls"
 
 [node name="RestartButton" type="Button" parent="CanvasLayer/PauseMenu/MainButtons" unique_id=1160817876]
 layout_mode = 2
@@ -282,6 +364,7 @@ surface_material_override/0 = SubResource("StandardMaterial3D_1bvp3")
 
 [connection signal="pressed" from="CanvasLayer/PauseMenu/MainButtons/ContinueButton" to="CanvasLayer/PauseMenu" method="_on_continue_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/PauseMenu/MainButtons/SettingsButton" to="CanvasLayer/PauseMenu" method="_on_settings_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/PauseMenu/MainButtons/ControlsButton" to="CanvasLayer/PauseMenu" method="_on_controls_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/PauseMenu/MainButtons/RestartButton" to="CanvasLayer/PauseMenu" method="_on_restart_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/PauseMenu/MainButtons/QuitButton" to="CanvasLayer/PauseMenu" method="_on_quit_button_pressed"]
 [connection signal="toggled" from="CanvasLayer/PauseMenu/SettingsPage/FullscreenToggle" to="CanvasLayer/PauseMenu" method="_on_fullscreen_toggle_toggled"]
