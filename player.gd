@@ -13,7 +13,12 @@ extends CharacterBody3D
 @export var footstep_pitch_max: float = 1.08
 @export var jump_volume_db: float = -10.0
 @export var landing_volume_db: float = -9.0
-var color_index: int = 0
+signal inventory_changed
+
+const SLOT_COUNT = 10
+const MAX_STACK = 64
+var inventory: Array = []
+var selected_slot: int = 0
 
 @onready var camera = $Head/Camera3D
 @onready var preview_brick = get_parent().get_node("PreviewBrick")
@@ -39,7 +44,6 @@ const SPEED = 5.0
 const JUMP_VELOCITY = 4.5
 const BRICK_SIZE = 0.5
 const HALF_BRICK = BRICK_SIZE * 0.5
-var current_color: Color = Color.DARK_RED
 var footstep_timer: float = 0.0
 var footstep_player: AudioStreamPlayer
 var footstep_sfx_list: Array[AudioStream] = []
@@ -56,8 +60,38 @@ func _snap_to_grid(pos: Vector3) -> Vector3:
 	)
 
 
+func add_to_inventory(block_type: String) -> bool:
+	# First: try to stack onto existing non-full slot of same type
+	for i in SLOT_COUNT:
+		if inventory[i] != null and inventory[i]["type"] == block_type and inventory[i]["count"] < MAX_STACK:
+			inventory[i]["count"] += 1
+			emit_signal("inventory_changed")
+			return true
+	# Second: find first empty slot
+	for i in SLOT_COUNT:
+		if inventory[i] == null:
+			inventory[i] = {"type": block_type, "count": 1}
+			emit_signal("inventory_changed")
+			return true
+	return false
+
+
+func consume_from_slot() -> String:
+	if inventory[selected_slot] == null:
+		return ""
+	var block_type: String = inventory[selected_slot]["type"]
+	inventory[selected_slot]["count"] -= 1
+	if inventory[selected_slot]["count"] <= 0:
+		inventory[selected_slot] = null
+	emit_signal("inventory_changed")
+	return block_type
+
+
 func _ready():
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	inventory.resize(SLOT_COUNT)
+	for i in SLOT_COUNT:
+		inventory[i] = null
 	footstep_sfx_list = [footstep_sfx_c, footstep_sfx_d, footstep_sfx_a, footstep_sfx_b]
 	footstep_player = AudioStreamPlayer.new()
 	footstep_player.volume_db = footstep_volume_db
@@ -95,20 +129,25 @@ func _unhandled_input(event):
 		$Head.rotation.x = clamp($Head.rotation.x, -deg_to_rad(80), deg_to_rad(80))
 
 	if event.is_action_pressed("left_click"):
-		place_brick()
+		remove_block()
 
 	if event.is_action_pressed("right_click"):
-		remove_brick()
+		place_block()
 
-	#if event.is_action_pressed("ui_focus_next"): # Tab or add keys 1, 2, 3 to Input Map
-		#current_color = Color(randf(), randf(), randf()) # Random color for fun
+	# Inventory slot selection — keyboard 1-9 → slots 0-8, key 0 → slot 9
+	var slot_keys = ["slot_1","slot_2","slot_3","slot_4","slot_5","slot_6","slot_7","slot_8","slot_9","slot_0"]
+	for i in slot_keys.size():
+		if event.is_action_pressed(slot_keys[i]):
+			selected_slot = i
+			emit_signal("inventory_changed")
 
-	if event.is_action_pressed("ui_focus_next"): # The TAB key or gamepad Y button
-		var colors = [Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW, Color.PURPLE]
-		color_index += 1
-		color_index = color_index % colors.size()
-		current_color = colors[color_index]
-		print("Switched to color #", color_index, ": ", current_color)
+	# Gamepad LB/RB cycle slots
+	if event.is_action_pressed("slot_next"):
+		selected_slot = (selected_slot + 1) % SLOT_COUNT
+		emit_signal("inventory_changed")
+	if event.is_action_pressed("slot_prev"):
+		selected_slot = (selected_slot - 1 + SLOT_COUNT) % SLOT_COUNT
+		emit_signal("inventory_changed")
 
 	if event.is_action_pressed("ui_cancel"): # This is the ESC key or gamepad Start by default
 		# Toggle pause menu
@@ -224,6 +263,11 @@ func update_preview():
 	if not preview_brick:
 		return
 
+	# Hide preview if selected slot is empty
+	if inventory[selected_slot] == null:
+		preview_brick.visible = false
+		return
+
 	var space_state = get_world_3d().direct_space_state
 	var from = camera.global_transform.origin
 	var to = from + (-camera.global_transform.basis.z * build_range)
@@ -232,10 +276,6 @@ func update_preview():
 
 	var result = space_state.intersect_ray(query)
 	if result:
-		if result.collider and result.collider.name == "Floor":
-			preview_brick.visible = false
-			return
-
 		preview_brick.visible = true
 		var n = result.normal.normalized()
 		var target_center = result.collider.global_transform.origin
@@ -252,7 +292,11 @@ func update_preview():
 		preview_brick.visible = false
 
 
-func place_brick():
+func place_block():
+	var block_type = consume_from_slot()
+	if block_type == "":
+		return
+
 	var space_state = get_world_3d().direct_space_state
 	var from = camera.global_transform.origin
 	var to = from + (-camera.global_transform.basis.z * build_range)
@@ -264,31 +308,37 @@ func place_brick():
 	if result:
 		var spawn_pos = result.position + result.normal * HALF_BRICK
 		var snapped_pos = _snap_to_grid(spawn_pos)
-		
-		# 1. Instantiate and Add Brick to the container
-		var new_brick = brick_scene.instantiate()
-		bricks_folder.add_child(new_brick) # Uses the @onready variable from Step 1
-		new_brick.global_position = snapped_pos
 
-		# 2. Apply Color
+		var new_brick = brick_scene.instantiate()
+		bricks_folder.add_child(new_brick)
+		new_brick.global_position = snapped_pos
+		new_brick.set_meta("block_type", block_type)
+
+		# Apply material by block type
 		var mesh = new_brick.find_child("MeshInstance3D")
 		if mesh:
 			var new_mat = StandardMaterial3D.new()
-			new_mat.albedo_color = current_color
+			if block_type == "wood":
+				new_mat.albedo_color = Color(0.93, 0.91, 0.85)
+			else: # ground_block
+				new_mat.albedo_color = Color(0.4, 0.7, 0.25)
+			new_mat.roughness = 1.0
 			mesh.material_override = new_mat
 
 		anim_player.play("place_brick")
 
-		# 3. Play Sound (Juice!)
 		var sfx = AudioStreamPlayer.new()
 		sfx.stream = place_sfx
 		sfx.volume_db = place_volume_db
 		get_tree().root.add_child(sfx)
 		sfx.play()
 		sfx.finished.connect(sfx.queue_free)
+	else:
+		# No surface hit — return the block to inventory
+		add_to_inventory(block_type)
 
 
-func remove_brick():
+func remove_block():
 	var space_state = get_world_3d().direct_space_state
 	var from = camera.global_transform.origin
 	var to = from + (-camera.global_transform.basis.z * build_range)
@@ -298,17 +348,23 @@ func remove_brick():
 	var result = space_state.intersect_ray(query)
 
 	if result:
-		# result.collider is the Brick node we hit
-		# We check if it's NOT the floor (we don't want to delete the floor!)
-		if result.collider.name != "Floor":
-			anim_player.play("remove_brick")
-			var sfx = AudioStreamPlayer.new()
-			sfx.stream = remove_sfx
-			sfx.volume_db = remove_volume_db
-			get_tree().root.add_child(sfx)
-			sfx.play()
-			sfx.finished.connect(sfx.queue_free)
-			result.collider.queue_free() # This deletes the node
+		# Return block to inventory if it has a type tag (i.e. was placed by player)
+		if result.collider.has_meta("block_type"):
+			var block_type: String = result.collider.get_meta("block_type")
+			add_to_inventory(block_type)
+		elif result.collider.is_in_group("wood"):
+			add_to_inventory("wood")
+		elif result.collider.is_in_group("ground_block"):
+			add_to_inventory("ground_block")
+
+		anim_player.play("remove_brick")
+		var sfx = AudioStreamPlayer.new()
+		sfx.stream = remove_sfx
+		sfx.volume_db = remove_volume_db
+		get_tree().root.add_child(sfx)
+		sfx.play()
+		sfx.finished.connect(sfx.queue_free)
+		result.collider.queue_free()
 
 
 func _on_back_button_pressed() -> void:

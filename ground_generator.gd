@@ -28,4 +28,5 @@ func _generate_ground() -> void:
 				0.0,
 				start_z + z * block_size
 			)
+			block.add_to_group("ground_block")
 			blocks.add_child(block)

@@ -54,7 +54,8 @@ func _build_trunk() -> void:
 		# Sparse dark bands help sell the birch look without textures.
 		if y == 1 or y == 3 or y == trunk_height - 2:
 			mat = bark_mark_mat
-		_add_voxel(Vector3(0, y, 0), mat)
+		var body = _add_voxel(Vector3(0, y, 0), mat)
+		body.add_to_group("wood")
 
 
 func _build_leaves() -> void:
@@ -75,7 +76,7 @@ func _build_leaves() -> void:
 	_add_voxel(Vector3(0, top_y + leaf_layers, 0), leaf_mat)
 
 
-func _add_voxel(grid_pos: Vector3, material: StandardMaterial3D) -> void:
+func _add_voxel(grid_pos: Vector3, material: StandardMaterial3D) -> StaticBody3D:
 	var body = StaticBody3D.new()
 	body.position = Vector3(
 		grid_pos.x * block_size,
@@ -93,3 +94,4 @@ func _add_voxel(grid_pos: Vector3, material: StandardMaterial3D) -> void:
 	body.add_child(collider)
 
 	blocks.add_child(body)
+	return body

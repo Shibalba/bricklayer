@@ -7,6 +7,7 @@
 [ext_resource type="Script" uid="uid://bqqx83a7di8v8" path="res://controls_overlay.gd" id="4_1x8sf"]
 [ext_resource type="PackedScene" path="res://birch_tree.tscn" id="5_2d8qk"]
 [ext_resource type="Script" uid="uid://b7snmy1w53vl3" path="res://ground_generator.gd" id="6_e1t97"]
+[ext_resource type="Script" uid="uid://c4nv3nt0ry01a" path="res://inventory_hud.gd" id="7_invhud"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_0xm2m"]
 
@@ -445,6 +446,291 @@ text = "Gamepad"
 [node name="GamepadText" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns/GamepadColumn" unique_id=1378737317]
 layout_mode = 2
 autowrap_mode = 3
+
+[node name="InventoryBar" type="HBoxContainer" parent="CanvasLayer" unique_id=4000000001]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -338.0
+offset_top = -74.0
+offset_right = 338.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 4
+script = ExtResource("7_invhud")
+
+[node name="Slot0" type="Panel" parent="CanvasLayer/InventoryBar" unique_id=4000000002]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Icon" type="ColorRect" parent="CanvasLayer/InventoryBar/Slot0" unique_id=4000000003]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.15, 0.15, 0.15, 1)
+
+[node name="Count" type="Label" parent="CanvasLayer/InventoryBar/Slot0" unique_id=4000000004]
+visible = false
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -20.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 11
+text = ""
+horizontal_alignment = 1
+
+[node name="Slot1" type="Panel" parent="CanvasLayer/InventoryBar" unique_id=4000000005]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Icon" type="ColorRect" parent="CanvasLayer/InventoryBar/Slot1" unique_id=4000000006]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.15, 0.15, 0.15, 1)
+
+[node name="Count" type="Label" parent="CanvasLayer/InventoryBar/Slot1" unique_id=4000000007]
+visible = false
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -20.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 11
+text = ""
+horizontal_alignment = 1
+
+[node name="Slot2" type="Panel" parent="CanvasLayer/InventoryBar" unique_id=4000000008]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Icon" type="ColorRect" parent="CanvasLayer/InventoryBar/Slot2" unique_id=4000000009]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.15, 0.15, 0.15, 1)
+
+[node name="Count" type="Label" parent="CanvasLayer/InventoryBar/Slot2" unique_id=4000000010]
+visible = false
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -20.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 11
+text = ""
+horizontal_alignment = 1
+
+[node name="Slot3" type="Panel" parent="CanvasLayer/InventoryBar" unique_id=4000000011]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Icon" type="ColorRect" parent="CanvasLayer/InventoryBar/Slot3" unique_id=4000000012]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.15, 0.15, 0.15, 1)
+
+[node name="Count" type="Label" parent="CanvasLayer/InventoryBar/Slot3" unique_id=4000000013]
+visible = false
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -20.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 11
+text = ""
+horizontal_alignment = 1
+
+[node name="Slot4" type="Panel" parent="CanvasLayer/InventoryBar" unique_id=4000000014]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Icon" type="ColorRect" parent="CanvasLayer/InventoryBar/Slot4" unique_id=4000000015]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.15, 0.15, 0.15, 1)
+
+[node name="Count" type="Label" parent="CanvasLayer/InventoryBar/Slot4" unique_id=4000000016]
+visible = false
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -20.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 11
+text = ""
+horizontal_alignment = 1
+
+[node name="Slot5" type="Panel" parent="CanvasLayer/InventoryBar" unique_id=4000000017]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Icon" type="ColorRect" parent="CanvasLayer/InventoryBar/Slot5" unique_id=4000000018]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.15, 0.15, 0.15, 1)
+
+[node name="Count" type="Label" parent="CanvasLayer/InventoryBar/Slot5" unique_id=4000000019]
+visible = false
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -20.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 11
+text = ""
+horizontal_alignment = 1
+
+[node name="Slot6" type="Panel" parent="CanvasLayer/InventoryBar" unique_id=4000000020]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Icon" type="ColorRect" parent="CanvasLayer/InventoryBar/Slot6" unique_id=4000000021]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.15, 0.15, 0.15, 1)
+
+[node name="Count" type="Label" parent="CanvasLayer/InventoryBar/Slot6" unique_id=4000000022]
+visible = false
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -20.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 11
+text = ""
+horizontal_alignment = 1
+
+[node name="Slot7" type="Panel" parent="CanvasLayer/InventoryBar" unique_id=4000000023]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Icon" type="ColorRect" parent="CanvasLayer/InventoryBar/Slot7" unique_id=4000000024]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.15, 0.15, 0.15, 1)
+
+[node name="Count" type="Label" parent="CanvasLayer/InventoryBar/Slot7" unique_id=4000000025]
+visible = false
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -20.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 11
+text = ""
+horizontal_alignment = 1
+
+[node name="Slot8" type="Panel" parent="CanvasLayer/InventoryBar" unique_id=4000000026]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Icon" type="ColorRect" parent="CanvasLayer/InventoryBar/Slot8" unique_id=4000000027]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.15, 0.15, 0.15, 1)
+
+[node name="Count" type="Label" parent="CanvasLayer/InventoryBar/Slot8" unique_id=4000000028]
+visible = false
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -20.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 11
+text = ""
+horizontal_alignment = 1
+
+[node name="Slot9" type="Panel" parent="CanvasLayer/InventoryBar" unique_id=4000000029]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Icon" type="ColorRect" parent="CanvasLayer/InventoryBar/Slot9" unique_id=4000000030]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.15, 0.15, 0.15, 1)
+
+[node name="Count" type="Label" parent="CanvasLayer/InventoryBar/Slot9" unique_id=4000000031]
+visible = false
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -20.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 11
+text = ""
+horizontal_alignment = 1
 
 [node name="Bricks" type="Node3D" parent="." unique_id=100805324]
 unique_name_in_owner = true
