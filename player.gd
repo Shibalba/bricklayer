@@ -5,6 +5,7 @@ extends CharacterBody3D
 @export var stick_look_speed = 2.5
 @export var brick_scene: PackedScene = preload("res://brick.tscn")
 @export var build_range: float = 2.0
+@export var place_volume_db: float = -16.0
 @export var footstep_interval: float = 0.32
 @export var footstep_volume_db: float = -14.0
 @export var footstep_pitch_min: float = 0.92
@@ -17,8 +18,11 @@ var color_index: int = 0
 
 # PRELOAD ASSETS (Loads once at start, not every click)
 @onready var place_sfx = preload("res://click.wav")
-@onready var footstep_sfx = preload("res://click.wav")
-@onready var jump_sfx = preload("res://click.wav")
+@onready var footstep_sfx_c = preload("res://Steps_gravel-005.ogg")
+@onready var footstep_sfx_d = preload("res://Steps_gravel-006.ogg")
+@onready var footstep_sfx_a = preload("res://Steps_gravel-017.ogg")
+@onready var footstep_sfx_b = preload("res://Steps_gravel-018.ogg")
+@onready var jump_sfx = preload("res://Steps_gravel-021.ogg")
 @onready var anim_player = $AnimationPlayer
 
 # CACHE THE BRICKS FOLDER (Faster and safer than get_tree)
@@ -34,6 +38,8 @@ const HALF_BRICK = BRICK_SIZE * 0.5
 var current_color: Color = Color.DARK_RED
 var footstep_timer: float = 0.0
 var footstep_player: AudioStreamPlayer
+var footstep_sfx_list: Array[AudioStream] = []
+var last_footstep_index: int = -1
 
 
 func _snap_to_grid(pos: Vector3) -> Vector3:
@@ -46,8 +52,8 @@ func _snap_to_grid(pos: Vector3) -> Vector3:
 
 func _ready():
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	footstep_sfx_list = [footstep_sfx_c, footstep_sfx_d, footstep_sfx_a, footstep_sfx_b]
 	footstep_player = AudioStreamPlayer.new()
-	footstep_player.stream = footstep_sfx
 	footstep_player.volume_db = footstep_volume_db
 	add_child(footstep_player)
 
@@ -155,9 +161,26 @@ func _update_footsteps(delta: float) -> void:
 	if footstep_timer > 0.0:
 		return
 
+	footstep_player.stream = _pick_footstep_stream()
 	footstep_player.pitch_scale = randf_range(footstep_pitch_min, footstep_pitch_max)
 	footstep_player.play()
 	footstep_timer = footstep_interval
+
+
+func _pick_footstep_stream() -> AudioStream:
+	if footstep_sfx_list.is_empty():
+		return null
+
+	if footstep_sfx_list.size() == 1:
+		last_footstep_index = 0
+		return footstep_sfx_list[0]
+
+	var next_index = randi_range(0, footstep_sfx_list.size() - 1)
+	while next_index == last_footstep_index:
+		next_index = randi_range(0, footstep_sfx_list.size() - 1)
+
+	last_footstep_index = next_index
+	return footstep_sfx_list[next_index]
 
 
 func _play_jump_sound() -> void:
@@ -231,6 +254,7 @@ func place_brick():
 		# 3. Play Sound (Juice!)
 		var sfx = AudioStreamPlayer.new()
 		sfx.stream = place_sfx
+		sfx.volume_db = place_volume_db
 		get_tree().root.add_child(sfx)
 		sfx.play()
 		sfx.finished.connect(sfx.queue_free)
