@@ -137,6 +137,11 @@ func _ready():
 	footstep_player.volume_db = footstep_volume_db
 	add_child(footstep_player)
 	was_on_floor_last_frame = is_on_floor()
+	# Snap spawn position above terrain surface
+	var ground_gen = get_parent().get_node_or_null("GroundGenerator")
+	if ground_gen and ground_gen.has_method("get_height_at"):
+		var terrain_y = ground_gen.get_height_at(global_position.x, global_position.z)
+		global_position.y = terrain_y + 2.0
 
 
 func _input(event: InputEvent) -> void:
@@ -301,11 +306,6 @@ func update_preview():
 	if not preview_brick:
 		return
 
-	# Hide preview if selected slot is empty
-	if inventory[selected_slot] == null:
-		preview_brick.visible = false
-		return
-
 	var space_state = get_world_3d().direct_space_state
 	var from = camera.global_transform.origin
 	var to = from + (-camera.global_transform.basis.z * build_range)
@@ -348,16 +348,13 @@ func place_block():
 		var snapped_pos = _snap_to_grid(spawn_pos)
 
 		var new_brick = brick_scene.instantiate()
+		new_brick.position = snapped_pos
 		bricks_folder.add_child(new_brick)
-		new_brick.global_position = snapped_pos
 
-		# Set meta on StaticBody3D child "Brick", not root Node3D,
-		# so result.collider.has_meta("block_type") works correctly on removal
-		var brick_body = new_brick.get_node("Brick")
 		var max_hp: int = 4 if block_type == "wood" else 2
-		brick_body.set_meta("block_type", block_type)
-		brick_body.set_meta("hp", max_hp)
-		brick_body.set_meta("max_hp", max_hp)
+		new_brick.set_meta("block_type", block_type)
+		new_brick.set_meta("hp", max_hp)
+		new_brick.set_meta("max_hp", max_hp)
 
 		# Apply material by block type (brown tints)
 		var mesh = new_brick.find_child("MeshInstance3D")
@@ -438,6 +435,12 @@ func _process_mining(delta: float) -> void:
 			add_to_inventory("wood")
 		elif target.is_in_group("ground_block"):
 			add_to_inventory("ground_block")
+		# Promote fill block below if this was a terrain surface block
+		# Deferred so physics body is added outside _physics_process context
+		if target.is_in_group("ground_block") and target.has_meta("grid_pos"):
+			var ground_gen = get_parent().get_node_or_null("GroundGenerator")
+			if ground_gen:
+				ground_gen.call_deferred("on_surface_removed", target.get_meta("grid_pos"))
 		anim_player.play("remove_brick")
 		var sfx = AudioStreamPlayer.new()
 		sfx.stream = remove_sfx

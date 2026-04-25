@@ -3,8 +3,8 @@ extends HBoxContainer
 @onready var player: CharacterBody3D = get_parent().get_parent().get_node("Player")
 
 const SLOT_COUNT = 10
-const COLOR_WOOD = Color(0.93, 0.91, 0.85)
-const COLOR_GROUND = Color(0.4, 0.7, 0.25)
+const COLOR_WOOD = Color(0.72, 0.52, 0.30)
+const COLOR_GROUND = Color(0.42, 0.28, 0.12)
 const COLOR_EMPTY = Color(0.15, 0.15, 0.15)
 const COLOR_SELECTED_BORDER = Color(0.0, 0.0, 0.0)
 const COLOR_NORMAL_BORDER = Color(0.35, 0.35, 0.35)
