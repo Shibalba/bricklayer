@@ -46,6 +46,8 @@ uv2_scale = Vector3(150, 150, 150)
 points = PackedVector3Array(-25, -0.25, -25, -25, 0.25, -25, 25, -0.25, -25, -25, -0.25, 25, -25, 0.25, 25, 25, 0.25, -25, 25, -0.25, 25, 25, 0.25, 25)
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_5vw27"]
+radius = 0.2
+height = 1.5
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lquwl"]
 albedo_color = Color(0.94509804, 0.7607843, 0.49019608, 1)
@@ -201,6 +203,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
 script = ExtResource("1_ig7tw")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Player" unique_id=556174717]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
 shape = SubResource("CapsuleShape3D_5vw27")
 
 [node name="Model" type="Node3D" parent="Player"]
