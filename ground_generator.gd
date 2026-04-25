@@ -57,10 +57,70 @@ func _snap_trees_to_terrain() -> void:
 	for tree in _tree_nodes:
 		tree.global_position.y = get_height_at(tree.global_position.x, tree.global_position.z)
 
+func _get_grid_pos_from_world(world_pos: Vector3) -> Vector3i:
+	return Vector3i(
+		int(round((world_pos.x - _start_x) / block_size)),
+		int(round(world_pos.y / block_size)),
+		int(round((world_pos.z - _start_z) / block_size))
+	)
 
-func on_surface_removed(grid_pos: Vector3i) -> void:
-	_surface_blocks.erase(grid_pos)
+func on_block_placed(snapped_pos: Vector3, player_bricks_node: Node3D) -> void:
+	var placed_grid_pos = _get_grid_pos_from_world(snapped_pos)
+	print("[ground_generator.gd] on_block_placed at world: ", snapped_pos, " -> grid: ", placed_grid_pos)
+	var adjacent_offsets = [
+		Vector3i(0, -1, 0),
+		Vector3i(0, 1, 0),
+		Vector3i(-1, 0, 0),
+		Vector3i(1, 0, 0),
+		Vector3i(0, 0, -1),
+		Vector3i(0, 0, 1)
+	]
 	
+	var multimesh_needs_rebuild = false
+	
+	# Check adjacent blocks to see if they're ground surface blocks that got occluded
+	for offset in adjacent_offsets:
+		var adj_pos = placed_grid_pos + offset
+		if _surface_blocks.has(adj_pos):
+			var completely_hidden = true
+			
+			for inner_offset in adjacent_offsets:
+				var neighbor_pos = adj_pos + inner_offset
+				var is_solid = false
+				
+				# Optimization solid checks
+				if _fill_set.has(neighbor_pos) or _surface_blocks.has(neighbor_pos) or neighbor_pos == placed_grid_pos:
+					is_solid = true
+				else:
+					# Check if there is another player placed block here
+					var world_pos = Vector3(_start_x + neighbor_pos.x * block_size, neighbor_pos.y * block_size, _start_z + neighbor_pos.z * block_size)
+					for block in player_bricks_node.get_children():
+						if block.position.distance_squared_to(world_pos) < 0.01:
+							is_solid = true
+							break
+				
+				if not is_solid:
+					completely_hidden = false
+					break
+			
+			# If the adjacent ground block is fully enveloped, move it to fill!
+			if completely_hidden:
+				print("[ground_generator.gd] Surface block at grid ", adj_pos, " fully occluded! Demoting to fill set.")
+				var surface_block = _surface_blocks[adj_pos]
+				var world_pos = surface_block.position
+				_fill_set[adj_pos] = world_pos
+				_surface_blocks.erase(adj_pos)
+				surface_block.queue_free()
+				multimesh_needs_rebuild = true
+	
+	if multimesh_needs_rebuild:
+		_rebuild_fill_multimesh()
+
+func on_block_removed(world_pos: Vector3) -> void:
+	var grid_pos = _get_grid_pos_from_world(world_pos)
+	print("[ground_generator.gd] on_block_removed at world: ", world_pos, " -> grid: ", grid_pos)
+	_surface_blocks.erase(grid_pos)
+
 	var adjacent_offsets = [
 		Vector3i(0, -1, 0),
 		Vector3i(0, 1, 0),
@@ -76,6 +136,7 @@ func on_surface_removed(grid_pos: Vector3i) -> void:
 		var adj_pos = grid_pos + offset
 		if _fill_set.has(adj_pos):
 			# Promote the adjacent fill voxel into a real collidable surface block
+			print("[ground_generator.gd] Promoting exposed fill at grid ", adj_pos, " back to static surface!")
 			_fill_set.erase(adj_pos)
 			multimesh_needs_rebuild = true
 			

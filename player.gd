@@ -364,6 +364,12 @@ func place_block():
 		var new_brick = brick_scene.instantiate()
 		new_brick.position = snapped_pos
 		bricks_folder.add_child(new_brick)
+		
+		# Optimization: Check if this new block seals any adjacent surface blocks
+		var ground = get_parent().get_node("GroundGenerator")
+		if ground and ground.has_method("on_block_placed"):
+			print("[player.gd] Calling on_block_placed with snapped_pos: ", snapped_pos)
+			ground.on_block_placed(snapped_pos, bricks_folder)
 
 		var max_hp: int = 4 if block_type == "wood" else 2
 		new_brick.set_meta("block_type", block_type)
@@ -441,12 +447,13 @@ func _process_mining(delta: float) -> void:
 			add_to_inventory("wood")
 		elif target.is_in_group("ground_block"):
 			add_to_inventory("ground_block")
-		# Promote fill block below if this was a terrain surface block
-		# Deferred so physics body is added outside _physics_process context
-		if target.is_in_group("ground_block") and target.has_meta("grid_pos"):
-			var ground_gen = get_parent().get_node_or_null("GroundGenerator")
-			if ground_gen:
-				ground_gen.call_deferred("on_surface_removed", target.get_meta("grid_pos"))
+			
+		# Expose adjacent fill blocks if they were occluded
+		var ground_gen = get_parent().get_node_or_null("GroundGenerator")
+		if ground_gen and ground_gen.has_method("on_block_removed"):				
+			print("[player.gd] Calling on_block_removed with target.global_position: ", target.global_position)		
+			ground_gen.call_deferred("on_block_removed", target.global_position)
+				
 		anim_player.play("remove_brick")
 		var sfx = _get_sfx_player()
 		sfx.stream = remove_sfx
