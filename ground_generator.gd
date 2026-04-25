@@ -60,22 +60,38 @@ func _snap_trees_to_terrain() -> void:
 
 func on_surface_removed(grid_pos: Vector3i) -> void:
 	_surface_blocks.erase(grid_pos)
-	var below = Vector3i(grid_pos.x, grid_pos.y - 1, grid_pos.z)
-	if not _fill_set.has(below):
-		return
-	# Promote the fill voxel below into a real collidable surface block
-	_fill_set.erase(below)
-	_rebuild_fill_multimesh()
-	var new_surface = block_scene.instantiate()
-	new_surface.position = Vector3(
-		_start_x + below.x * block_size,
-		below.y * block_size,
-		_start_z + below.z * block_size
-	)
-	new_surface.add_to_group("ground_block")
-	new_surface.set_meta("grid_pos", below)
-	_surface_blocks[below] = new_surface
-	blocks.add_child(new_surface)
+	
+	var adjacent_offsets = [
+		Vector3i(0, -1, 0),
+		Vector3i(0, 1, 0),
+		Vector3i(-1, 0, 0),
+		Vector3i(1, 0, 0),
+		Vector3i(0, 0, -1),
+		Vector3i(0, 0, 1)
+	]
+	
+	var multimesh_needs_rebuild = false
+	
+	for offset in adjacent_offsets:
+		var adj_pos = grid_pos + offset
+		if _fill_set.has(adj_pos):
+			# Promote the adjacent fill voxel into a real collidable surface block
+			_fill_set.erase(adj_pos)
+			multimesh_needs_rebuild = true
+			
+			var new_surface = block_scene.instantiate()
+			new_surface.position = Vector3(
+				_start_x + adj_pos.x * block_size,
+				adj_pos.y * block_size,
+				_start_z + adj_pos.z * block_size
+			)
+			new_surface.add_to_group("ground_block")
+			new_surface.set_meta("grid_pos", adj_pos)
+			_surface_blocks[adj_pos] = new_surface
+			blocks.add_child(new_surface)
+			
+	if multimesh_needs_rebuild:
+		_rebuild_fill_multimesh()
 
 
 func _rebuild_fill_multimesh() -> void:
