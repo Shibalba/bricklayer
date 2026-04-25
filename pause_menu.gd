@@ -11,6 +11,8 @@ var resolutions: Dictionary = {
 @onready var fps_button = $SettingsPage/FpsRow/FpsButton
 @onready var main_buttons = $MainButtons
 @onready var settings_page = $SettingsPage
+@onready var continue_button = $MainButtons/ContinueButton
+@onready var settings_button = $MainButtons/SettingsButton
 
 func _ready():
 	hide()
@@ -42,6 +44,26 @@ func _ready():
 	settings_page.hide()
 	main_buttons.show()
 
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not visible:
+		return
+
+	# Keep cursor mode aligned with the active input device while paused.
+	if event is InputEventMouseMotion or event is InputEventMouseButton:
+		if Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	elif event is InputEventJoypadButton or event is InputEventJoypadMotion:
+		if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+	if event.is_action_pressed("menu_back"):
+		if settings_page.visible:
+			_on_back_button_pressed()
+		else:
+			toggle_pause()
+		get_viewport().set_input_as_handled()
+
 func set_max_fps_from_button() -> void:
 	var fps_text = fps_button.get_item_text(fps_button.selected)
 	var fps_value = int(fps_text)
@@ -60,11 +82,13 @@ func _on_settings_button_pressed():
 	# Hide the main menu, show settings
 	main_buttons.hide()
 	settings_page.show()
+	res_button.grab_focus()
 
 func _on_back_button_pressed():
 	# Hide settings, show main menu
 	settings_page.hide()
 	main_buttons.show()
+	settings_button.grab_focus()
 
 
 func _on_fullscreen_toggle_toggled(toggled_on: bool):
@@ -86,7 +110,7 @@ func _on_resolution_selected(index: int):
 	var window_pos = screen_center - (size / 2)
 	DisplayServer.window_set_position(window_pos)
 
-func toggle_pause():
+func toggle_pause(show_mouse_cursor: bool = true):
 	var new_pause_state = !get_tree().paused
 	get_tree().paused = new_pause_state
 	visible = new_pause_state
@@ -95,7 +119,8 @@ func toggle_pause():
 		# Reset to show main buttons every time we open the menu
 		main_buttons.show()
 		settings_page.hide()
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		continue_button.grab_focus()
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if show_mouse_cursor else Input.MOUSE_MODE_CAPTURED
 	else:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 

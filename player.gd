@@ -1,6 +1,8 @@
 extends CharacterBody3D
 
 @export var mouse_sensitivity = 0.002
+@export var stick_sensitivity = 1.5
+@export var stick_look_speed = 2.5
 @export var brick_scene: PackedScene = preload("res://brick.tscn")
 @export var build_range: float = 10.0
 var color_index: int = 0
@@ -27,7 +29,29 @@ var current_color: Color = Color.DARK_RED
 func _ready():
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
+
+func _input(event: InputEvent) -> void:
+	# While menu is open, let active device control cursor visibility.
+	if pause_menu and pause_menu.visible:
+		if event is InputEventMouseMotion or event is InputEventMouseButton:
+			if Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:
+				Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		elif event is InputEventJoypadButton or event is InputEventJoypadMotion:
+			if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		return
+
+	# During gameplay, keep mouse captured for FPS camera control.
+	if get_tree().paused:
+		return
+	if event is InputEventMouseMotion or event is InputEventMouseButton or event is InputEventKey:
+		if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
 func _unhandled_input(event):
+	if get_tree().paused:
+		return
+
 	if event is InputEventMouseMotion:
 		# Rotate the whole player left/right
 		rotate_y(-event.relative.x * mouse_sensitivity)
@@ -44,20 +68,18 @@ func _unhandled_input(event):
 	#if event.is_action_pressed("ui_focus_next"): # Tab or add keys 1, 2, 3 to Input Map
 		#current_color = Color(randf(), randf(), randf()) # Random color for fun
 
-	if event.is_action_pressed("ui_focus_next"): # The TAB key
+	if event.is_action_pressed("ui_focus_next"): # The TAB key or gamepad Y button
 		var colors = [Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW, Color.PURPLE]
 		color_index += 1
 		color_index = color_index % colors.size()
 		current_color = colors[color_index]
 		print("Switched to color #", color_index, ": ", current_color)
 
-	if event.is_action_pressed("ui_cancel"): # This is the ESC key by default
-		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-			if pause_menu:
-				pause_menu.toggle_pause()
-		else:
-			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if event.is_action_pressed("ui_cancel"): # This is the ESC key or gamepad Start by default
+		# Toggle pause menu
+		if pause_menu:
+			var opened_with_controller := event is InputEventJoypadButton or event is InputEventJoypadMotion
+			pause_menu.toggle_pause(!opened_with_controller)
 
 
 func _physics_process(delta: float) -> void:
@@ -68,6 +90,16 @@ func _physics_process(delta: float) -> void:
 	# Handle jump.
 	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = JUMP_VELOCITY
+
+	# --- GAMEPAD CAMERA LOOK ---
+	# Poll analog stick input for camera control (frame-rate independent)
+	var stick_x = Input.get_axis("look_horizontal_negative", "look_horizontal")
+	var stick_y = Input.get_axis("look_vertical_negative", "look_vertical")
+	if abs(stick_x) > 0 or abs(stick_y) > 0:
+		# Use a dedicated rad/sec speed for analog look to avoid extremely tiny rotation.
+		rotate_y(-stick_x * stick_look_speed * stick_sensitivity * delta)
+		$Head.rotate_x(-stick_y * stick_look_speed * stick_sensitivity * delta)
+		$Head.rotation.x = clamp($Head.rotation.x, -deg_to_rad(80), deg_to_rad(80))
 
 	# Get the input direction and handle the movement/deceleration.
 	# As good practice, you should replace UI actions with custom gameplay actions.
