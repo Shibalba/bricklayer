@@ -50,8 +50,25 @@ points = PackedVector3Array(-25, -0.25, -25, -25, 0.25, -25, 25, -0.25, -25, -25
 albedo_color = Color(0.94509804, 0.7607843, 0.49019608, 1)
 metallic_specular = 0.19
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_body"]
+albedo_color = Color(0.7411765, 0.2509804, 0.14509805, 1)
+roughness = 0.95
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_legs"]
+albedo_color = Color(0.16862746, 0.18431373, 0.22352941, 1)
+roughness = 0.95
+
 [sub_resource type="BoxMesh" id="BoxMesh_1bvp3"]
-size = Vector3(0.2, 0.2, 0.8)
+size = Vector3(0.14, 0.14, 0.55)
+
+[sub_resource type="BoxMesh" id="BoxMesh_body"]
+size = Vector3(0.55, 0.75, 0.28)
+
+[sub_resource type="BoxMesh" id="BoxMesh_head"]
+size = Vector3(0.28, 0.28, 0.28)
+
+[sub_resource type="BoxMesh" id="BoxMesh_leg"]
+size = Vector3(0.16, 0.6, 0.16)
 
 [sub_resource type="Animation" id="Animation_h2yge"]
 length = 0.001
@@ -65,12 +82,12 @@ tracks/0/keys = {
 "times": PackedFloat32Array(0),
 "transitions": PackedFloat32Array(1),
 "update": 0,
-"values": [Vector3(0.5, -0.4, -0.3)]
+"values": [Vector3(0.42, -0.32, -0.24)]
 }
 
 [sub_resource type="Animation" id="Animation_1bvp3"]
 resource_name = "place_brick"
-length = 0.3
+length = 0.24
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
@@ -78,10 +95,10 @@ tracks/0/path = NodePath("Head/Camera3D/ArmAnchor:position")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
-"times": PackedFloat32Array(0, 0.1, 0.3),
+"times": PackedFloat32Array(0, 0.08, 0.24),
 "transitions": PackedFloat32Array(1, 1, 1),
 "update": 0,
-"values": [Vector3(0.5, -0.3, -0.15), Vector3(0.5, -0.4, -0.25), Vector3(0.5, -0.3, -0.15)]
+"values": [Vector3(0.42, -0.32, -0.24), Vector3(0.42, -0.5, -0.42), Vector3(0.42, -0.32, -0.24)]
 }
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_lquwl"]
@@ -150,15 +167,50 @@ script = ExtResource("1_ig7tw")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Player" unique_id=556174717]
 shape = SubResource("CapsuleShape3D_5vw27")
 
+[node name="Model" type="Node3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.0, 0)
+
+[node name="BodyMesh" type="MeshInstance3D" parent="Player/Model"]
+layers = 2
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+material_override = SubResource("StandardMaterial3D_body")
+mesh = SubResource("BoxMesh_body")
+
+[node name="HeadMesh" type="MeshInstance3D" parent="Player/Model"]
+layers = 2
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+material_override = SubResource("StandardMaterial3D_lquwl")
+mesh = SubResource("BoxMesh_head")
+
+[node name="LeftLegMesh" type="MeshInstance3D" parent="Player/Model"]
+layers = 2
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.13, 0.25, 0)
+material_override = SubResource("StandardMaterial3D_legs")
+mesh = SubResource("BoxMesh_leg")
+
+[node name="RightLegMesh" type="MeshInstance3D" parent="Player/Model"]
+layers = 2
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.13, 0.25, 0)
+material_override = SubResource("StandardMaterial3D_legs")
+mesh = SubResource("BoxMesh_leg")
+
+[node name="LeftArmMesh" type="MeshInstance3D" parent="Player/Model"]
+layers = 2
+transform = Transform3D(1, 0, 0, 0, 0.0871557, -0.9961947, 0, 0.9961947, 0.0871557, -0.37, 0.82, 0)
+material_override = SubResource("StandardMaterial3D_lquwl")
+mesh = SubResource("BoxMesh_1bvp3")
+
 [node name="Head" type="Node3D" parent="Player" unique_id=1219060794]
 
 [node name="Camera3D" type="Camera3D" parent="Player/Head" unique_id=1302631260]
+cull_mask = 1
 
 [node name="ArmAnchor" type="Node3D" parent="Player/Head/Camera3D" unique_id=1674053782]
-transform = Transform3D(0.9848077, -0.015134435, 0.1729874, 0, 0.9961947, 0.08715574, -0.17364818, -0.08583164, 0.98106027, 0.5, -0.4, -0.3)
+transform = Transform3D(0.9848077, -0.015134435, 0.1729874, 0, 0.9961947, 0.08715574, -0.17364818, -0.08583164, 0.98106027, 0.42, -0.32, -0.24)
 
 [node name="ArmMesh" type="MeshInstance3D" parent="Player/Head/Camera3D/ArmAnchor" unique_id=1828035558]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.28)
+cast_shadow = 0
 material_override = SubResource("StandardMaterial3D_lquwl")
 mesh = SubResource("BoxMesh_1bvp3")
 
