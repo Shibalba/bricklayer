@@ -9,9 +9,10 @@ rim = 0.5
 
 [sub_resource type="BoxMesh" id="BoxMesh_awxk8"]
 material = SubResource("StandardMaterial3D_nkspu")
+size = Vector3(0.5, 0.5, 0.5)
 
 [sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_5p85m"]
-points = PackedVector3Array(0.5, 0.5, 0.5, 0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5, 0.5, -0.5, -0.5, -0.5, 0.5, -0.5, -0.5, -0.5)
+points = PackedVector3Array(0.25, 0.25, 0.25, 0.25, 0.25, -0.25, -0.25, 0.25, 0.25, 0.25, -0.25, 0.25, 0.25, -0.25, -0.25, -0.25, 0.25, -0.25, -0.25, -0.25, 0.25, -0.25, -0.25, -0.25)
 
 [node name="Node3D" type="Node3D" unique_id=1276581451]
 

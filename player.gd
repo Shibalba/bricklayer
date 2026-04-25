@@ -4,14 +4,13 @@ extends CharacterBody3D
 @export var stick_sensitivity = 1.5
 @export var stick_look_speed = 2.5
 @export var brick_scene: PackedScene = preload("res://brick.tscn")
-@export var build_range: float = 10.0
+@export var build_range: float = 2.0
 var color_index: int = 0
 
 @onready var camera = $Head/Camera3D
 @onready var preview_brick = get_parent().get_node("PreviewBrick")
 
 # PRELOAD ASSETS (Loads once at start, not every click)
-@onready var dust_particles = preload("res://dust_cloud.tscn")
 @onready var place_sfx = preload("res://click.wav")
 @onready var anim_player = $AnimationPlayer
 
@@ -23,7 +22,17 @@ var color_index: int = 0
 
 const SPEED = 5.0
 const JUMP_VELOCITY = 4.5
+const BRICK_SIZE = 0.5
+const HALF_BRICK = BRICK_SIZE * 0.5
 var current_color: Color = Color.DARK_RED
+
+
+func _snap_to_grid(pos: Vector3) -> Vector3:
+	return Vector3(
+		round(pos.x / BRICK_SIZE) * BRICK_SIZE,
+		round(pos.y / BRICK_SIZE) * BRICK_SIZE,
+		round(pos.z / BRICK_SIZE) * BRICK_SIZE
+	)
 
 
 func _ready():
@@ -117,51 +126,49 @@ func _physics_process(delta: float) -> void:
 
 
 func update_preview():
-	# 1. Safety check: make sure the node actually exists
 	if not preview_brick:
 		return
 
 	var space_state = get_world_3d().direct_space_state
-	var mouse_pos = get_viewport().get_mouse_position()
-	var from = camera.project_ray_origin(mouse_pos)
-	var to = from + camera.project_ray_normal(mouse_pos) * build_range
+	var from = camera.global_transform.origin
+	var to = from + (-camera.global_transform.basis.z * build_range)
 	var query = PhysicsRayQueryParameters3D.create(from, to)
 	query.exclude = [self.get_rid()]
-	
-	var result = space_state.intersect_ray(query)
-	
-	if result:
-		preview_brick.visible = true
-		var spawn_pos = result.position + result.normal * 0.5
-		preview_brick.global_position = Vector3(round(spawn_pos.x), round(spawn_pos.y), round(spawn_pos.z))
 
-		# 2. Safety check: Ensure the brick has a material to color
-		if preview_brick.material_override == null:
-			preview_brick.material_override = StandardMaterial3D.new()
-			preview_brick.material_override.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		
-		# 3. Apply the color safely
-		var preview_color = current_color
-		preview_color.a = 0.5 # Make it semi-transparent
-		preview_brick.material_override.albedo_color = preview_color
+	var result = space_state.intersect_ray(query)
+	if result:
+		if result.collider and result.collider.name == "Floor":
+			preview_brick.visible = false
+			return
+
+		preview_brick.visible = true
+		var n = result.normal.normalized()
+		var target_center = result.collider.global_transform.origin
+		preview_brick.global_position = target_center + n * (HALF_BRICK + 0.01)
+
+		# Show only the targeted face by flattening one axis.
+		if abs(n.x) > 0.5:
+			preview_brick.scale = Vector3(0.02, 1.0, 1.0)
+		elif abs(n.y) > 0.5:
+			preview_brick.scale = Vector3(1.0, 0.02, 1.0)
+		else:
+			preview_brick.scale = Vector3(1.0, 1.0, 0.02)
 	else:
 		preview_brick.visible = false
 
 
 func place_brick():
 	var space_state = get_world_3d().direct_space_state
-	var mouse_pos = get_viewport().get_mouse_position()
-
-	var from = camera.project_ray_origin(mouse_pos)
-	var to = from + camera.project_ray_normal(mouse_pos) * build_range
+	var from = camera.global_transform.origin
+	var to = from + (-camera.global_transform.basis.z * build_range)
 	var query = PhysicsRayQueryParameters3D.create(from, to)
 	query.exclude = [self.get_rid()]
 
 	var result = space_state.intersect_ray(query)
 
 	if result:
-		var spawn_pos = result.position + result.normal * 0.5
-		var snapped_pos = Vector3(round(spawn_pos.x), round(spawn_pos.y), round(spawn_pos.z))
+		var spawn_pos = result.position + result.normal * HALF_BRICK
+		var snapped_pos = _snap_to_grid(spawn_pos)
 		
 		# 1. Instantiate and Add Brick to the container
 		var new_brick = brick_scene.instantiate()
@@ -175,14 +182,9 @@ func place_brick():
 			new_mat.albedo_color = current_color
 			mesh.material_override = new_mat
 
-		# 3. Spawn Particles (Juice!)
-		var particles = dust_particles.instantiate()
-		get_tree().root.add_child(particles)
-		particles.global_position = snapped_pos
-
 		anim_player.play("place_brick")
 
-		# 4. Play Sound (Juice!)
+		# 3. Play Sound (Juice!)
 		var sfx = AudioStreamPlayer.new()
 		sfx.stream = place_sfx
 		get_tree().root.add_child(sfx)
@@ -192,10 +194,8 @@ func place_brick():
 
 func remove_brick():
 	var space_state = get_world_3d().direct_space_state
-	var mouse_pos = get_viewport().get_mouse_position()
-
-	var from = camera.project_ray_origin(mouse_pos)
-	var to = from + camera.project_ray_normal(mouse_pos) * build_range
+	var from = camera.global_transform.origin
+	var to = from + (-camera.global_transform.basis.z * build_range)
 	var query = PhysicsRayQueryParameters3D.create(from, to)
 	query.exclude = [self.get_rid()]
 

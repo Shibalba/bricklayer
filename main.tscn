@@ -5,6 +5,8 @@
 [ext_resource type="Texture2D" uid="uid://buabfdshtghnl" path="res://Terrain12_img.jpg" id="2_1bvp3"]
 [ext_resource type="Script" uid="uid://505lvloaswbs" path="res://pause_menu.gd" id="3_h2yge"]
 [ext_resource type="Script" path="res://controls_overlay.gd" id="4_1x8sf"]
+[ext_resource type="PackedScene" path="res://birch_tree.tscn" id="5_2d8qk"]
+[ext_resource type="Script" path="res://ground_generator.gd" id="6_e1t97"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_0xm2m"]
 
@@ -93,10 +95,13 @@ material = SubResource("StandardMaterial3D_ig7tw")
 size = Vector3(1, 2, 1)
 
 [sub_resource type="BoxMesh" id="BoxMesh_h2yge"]
+size = Vector3(0.5, 0.5, 0.5)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1bvp3"]
-transparency = 1
-albedo_color = Color(1, 1, 1, 0.4862745)
+[sub_resource type="Shader" id="Shader_1bvp3"]
+code = "shader_type spatial;\nrender_mode unshaded, wireframe, cull_disabled;\n\nvoid fragment() {\n\tALBEDO = vec3(0.0, 0.0, 0.0);\n\tALPHA = 1.0;\n}\n"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_1bvp3"]
+shader = SubResource("Shader_1bvp3")
 
 [node name="Main" type="Node3D" unique_id=1609097307]
 
@@ -112,17 +117,36 @@ shadow_bias = 0.02
 shadow_normal_bias = 1.0
 
 [node name="Floor" type="StaticBody3D" parent="." unique_id=1306167417]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 physics_material_override = SubResource("PhysicsMaterial_lquwl")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Floor" unique_id=377108446]
+visible = false
 mesh = SubResource("BoxMesh_7mycd")
 surface_material_override/0 = SubResource("StandardMaterial3D_h2yge")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor" unique_id=526340134]
 shape = SubResource("ConvexPolygonShape3D_ig7tw")
 
+[node name="GroundGenerator" type="Node3D" parent="."]
+script = ExtResource("6_e1t97")
+
+[node name="Blocks" type="Node3D" parent="GroundGenerator"]
+
+[node name="BirchTreeA" parent="." instance=ExtResource("5_2d8qk")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 8)
+
+[node name="BirchTreeB" parent="." instance=ExtResource("5_2d8qk")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, 6)
+
+[node name="BirchTreeC" parent="." instance=ExtResource("5_2d8qk")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, -9)
+
+[node name="BirchTreeD" parent="." instance=ExtResource("5_2d8qk")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0, -12)
+
 [node name="Player" type="CharacterBody3D" parent="." unique_id=1941755123]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.7149963, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
 script = ExtResource("1_ig7tw")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Player" unique_id=556174717]
@@ -360,7 +384,7 @@ unique_name_in_owner = true
 
 [node name="PreviewBrick" type="MeshInstance3D" parent="." unique_id=564981442]
 mesh = SubResource("BoxMesh_h2yge")
-surface_material_override/0 = SubResource("StandardMaterial3D_1bvp3")
+surface_material_override/0 = SubResource("ShaderMaterial_1bvp3")
 
 [connection signal="pressed" from="CanvasLayer/PauseMenu/MainButtons/ContinueButton" to="CanvasLayer/PauseMenu" method="_on_continue_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/PauseMenu/MainButtons/SettingsButton" to="CanvasLayer/PauseMenu" method="_on_settings_button_pressed"]
