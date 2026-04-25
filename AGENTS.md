@@ -2,14 +2,14 @@
 
 ## Project Overview
 
-**Bricklayer** is a Godot 4.6 first-person 3D building game where players construct structures by placing and removing voxel-like bricks in real-time.
+**Bricklayer** is a Godot 4.6 first-person 3D building game where players mine and build voxel-like terrain in a dynamically generated world.
 
 ### Key Specs
 - **Engine**: Godot 4.6 (Forward Plus rendering)
 - **Language**: GDScript
 - **Platform**: Windows (packaged executable available)
 - **Resolution**: 1920×1080 default
-- **Features**: First-person camera, brick placement/removal, color selection, particle effects, pause menu with settings
+- **Features**: First-person camera, procedural ground generation, block mining (HP system), inventory management, dynamic physics occlusion, audio pooling, pause menu with settings
 
 ---
 
@@ -19,133 +19,96 @@
 
 | File | Purpose |
 |------|---------|
-| [player.gd](player.gd) | FPS controller, brick placement/removal, camera, color selection, raycast logic |
+| [player.gd](player.gd) | FPS controller, block mining/placement, inventory management, shared raycasting, and audio pooling |
+| [ground_generator.gd](ground_generator.gd) | Procedural 3D noise terrain generation, block-face occlusion checks, MultiMesh rendering, and dynamic StaticBody3D promotion |
+| [inventory_hud.gd](inventory_hud.gd) | Pre-allocates StyleBoxFlats and manages UI grid for the 10-slot inventory tracking |
 | [pause_menu.gd](pause_menu.gd) | Settings UI (resolution, fullscreen, FPS cap), game pause state |
-| [dust_cloud.gd](dust_cloud.gd) | Particle effect spawned on brick placement |
+| [birch_tree.gd](birch_tree.gd) | Generates birch tree meshes dynamically above terrain |
+| [dust_cloud.gd](dust_cloud.gd) | Particle effect spawned on block manipulation |
 
 ### Main Scenes
 
 | File | Purpose |
 |------|---------|
-| [main.tscn](main.tscn) | Root scene: player, camera, UI, bricks container, preview brick |
-| [brick.tscn](brick.tscn) | Individual brick prefab (MeshInstance3D with collision) |
-| [dust_cloud.tscn](dust_cloud.tscn) | Particle system for placement feedback |
-
-### Configuration
-
-| File | Purpose |
-|------|---------|
-| [project.godot](project.godot) | Engine config (version, input map, window size) |
-| [export_presets.cfg](export_presets.cfg) | Build presets for executable |
+| [main.tscn](main.tscn) | Root scene: player, terrain nodes, trees, UI, block container |
+| [brick.tscn](brick.tscn) | Standard player-placed brick prefab (Root: StaticBody3D with metadata) |
+| [ground_block.tscn](ground_block.tscn) | Generated terrain block with shader material for grass/dirt mapping |
+| [birch_tree.tscn](birch_tree.tscn) | Tree prefab with optimized mesh collision generation |
 
 ---
 
 ## Development Conventions
 
 ### Input Map
-- **W/A/S/D** — Movement (move_forward, move_left, move_right, move_backward)
+- **W/A/S/D** — Movement
 - **Space** — Jump
-- **Left Click** — Place brick
-- **Right Click** — Remove brick
-- **Tab** — Cycle brick color (Red → Green → Blue → Yellow → Purple)
-- **ESC** — Toggle pause menu
+- **Left Click** — Mine/Hit block (uses HP/damage tinting)
+- **Right Click** — Place selected inventory block
+- **1-9, 0** — Select inventory hotbar slots 0-9
+- **Gamepad LB/RB** — Cycle inventory hotbar slots
+- **ESC / Start** — Toggle pause menu
 
-### Node Structure
-- Unique names (@unique_name_in_owner) used extensively for quick lookups
-- `@onready` variables for cached references (safer than `get_tree()` chains)
-- Physics queries use `PhysicsRayQueryParameters3D` for raycasting
-
-### Common Patterns
-1. **Safety checks** on `@onready` variables before use
-2. **Preloaded assets** (@onready) to avoid reload costs
-3. **Signal connections** in `_ready()` for event handling
-4. **Print statements** for debugging (can be extended to logging system)
+### Optimizations & Core Patterns
+1. **Dynamic Terrain Physics (Culling)**: Unseen internal dirt blocks are generated exclusively as a MultiMeshInstance3D draw call. When a player breaks or places a block, on_block_removed() or on_block_placed() evaluates the 6 adjacent cell offsets. Occluded surface blocks revert to MultiMesh, while exposed MultiMesh blocks are instantiated dynamically into physical StaticBody3D blocks to save vast amounts of memory/physics processing.
+2. **Audio Pooling**: player.gd uses a pre-allocated array of AudioStreamPlayer nodes cycled round-robin to eliminate initialization latency when rapidly digging or placing blocks.
+3. **Single per-frame Raycasts**: Player physics queries are cached per _physics_process into _frame_ray to avoid duplicate intersections between the placement preview and mining functions. 
+4. **Pre-allocated GUI Rendering**: Themes, style boxes, and materials are created iteratively in _ready() functions rather than inside _process() loops.
+5. **Metadata Tagging**: All interactive bodies utilize .set_meta("hp") and .set_meta("block_type") logic embedded to dictate inventory interactions over class_name dependencies.
 
 ### Recent Changes
-- **FPS Cap Option**: Added `Max FPS` dropdown to settings page (30/60/90/120/240)
-  - Uses `Engine.max_fps` property
-  - Defaults to 60 FPS
-  - Persists for the session
+- **Occlusion/Fill Optimization**: Implemented run-time adjacent block checking. When blocks are grouped or sealed, they migrate from physics space to visual-only _fill_mmi.
+- **Inventory Integration**: Replaced basic color cycling with real resource picking (wood vs ground_block).
+- **Physics Model Refactoring**: Rebuilt rick.tscn to ensure StaticBody3D acts as the root node to flawlessly catch pickaxe raycasts.
+- **Audio Tuning**: Handled footprint interval and multi-pitch sampling logic to accompany hit_timer based digging rhythms.
 
 ---
 
 ## Agent Specializations
 
-### 1. **GDScript Code Review Agent**
-**Best for**: Code optimization, bug fixes, refactoring
+### 1. **Data Optimization Agent**
+**Best for**: Rendering performance, chunk loading, MultiMesh scaling
 
 **Responsibilities**:
-- Check for proper `@onready` initialization
-- Validate physics query parameters
-- Ensure signal connections are cleaned up
-- Review performance-critical paths (raycasting, particle spawning)
-
-**Files to monitor**: `player.gd`, `pause_menu.gd`, `dust_cloud.gd`
+- Monitor _rebuild_fill_multimesh array iterations.
+- Prevent memory leaks from array resizing or physics body orphanages.
+- Investigate Frustum culling patterns.
+**Main Focus**: ground_generator.gd, player.gd
 
 ### 2. **Scene & UI Agent**
-**Best for**: UI improvements, scene hierarchy, node management
+**Best for**: HUD expansions, CanvasLayers, accessibility menus
 
 **Responsibilities**:
-- Add/modify UI elements in pause menu or HUD
-- Organize scene hierarchy
-- Configure CanvasLayer layers
-- Manage OptionButton/CheckButton connections
-
-**Files to monitor**: `main.tscn`, `pause_menu.gd`
+- Develop inventory icons, stack-size text rendering.
+- Wire graphic toggles to native engine features (Engine.max_fps).
+**Main Focus**: main.tscn, inventory_hud.gd, pause_menu.gd
 
 ### 3. **Gameplay Feature Agent**
-**Best for**: New mechanics, input handling, player interactions
+**Best for**: Physics interactions, mining math, block state mutations
 
 **Responsibilities**:
-- Implement new building mechanics
-- Add player feedback (sounds, particles, animations)
-- Expand color system or brick types
-- Enhance raycasting logic
-
-**Files to monitor**: `player.gd`, `brick.tscn`
-
-### 4. **Settings & Configuration Agent**
-**Best for**: Options menus, performance tuning, project settings
-
-**Responsibilities**:
-- Add new settings (graphics, audio, gameplay)
-- Wire settings to engine properties (`Engine.max_fps`, `DisplayServer.*`)
-- Persist user preferences
-- Balance performance vs quality
-
-**Files to monitor**: `pause_menu.gd`, `project.godot`
+- Control HP damage curves, damage tint calculations (_apply_damage_tint).
+- Govern placement raycast grid snapping (_snap_to_grid).
+**Main Focus**: player.gd, rick.tscn
 
 ---
 
 ## Quick Debugging Checklist
 
-- [ ] Physics layers correctly configured for brick placement queries
-- [ ] Camera sensitivity is reasonable (currently `0.002`)
-- [ ] Brick preview updates smoothly (should run in `_physics_process`)
-- [ ] Pause menu closes cleanly and returns mouse control
-- [ ] FPS cap applies immediately on selection change
-- [ ] No unused imports or orphaned nodes in scenes
+- [ ] Ensure Raycast query.exclude successfully includes the player capsule.
+- [ ] Physics Rooting: All newly designed blocks *must* have StaticBody3D as their outermost scene root node, otherwise .get_meta() validations will fail silently when struck. 
+- [ ] Terrain holes check: Validating adjacent cell offsets must include (0, -1, 0), (0, 1, 0), (-1, 0, 0), (1, 0, 0), (0, 0, -1), (0, 0, 1) and appropriately trigger multimesh_needs_rebuild.
 
 ---
 
 ## Build & Export
 
-- **Main executable**: `Bricklayer.exe` (Windows)
-- **Package**: `Bricklayer.pck` (game data)
-- **Export preset**: Configured in `export_presets.cfg`
-- **Icon**: `icon.svg`
+- **Main executable**: Bricklayer.exe (Windows)
+- **Package**: Bricklayer.pck (game data)
+- **Export preset**: Configured in xport_presets.cfg
 
 ---
 
 ## Future Enhancements
-
-Potential agent tasks:
-- Add sound effect controls to settings
-- Implement undo/redo for placed bricks
-- Add multiple terrain types
-- Create brick shape variations
-- Add multiplayer or server sync
-- Optimize particle pooling
-- Add on-screen FPS counter
-- Implement save/load for creations
-
+- Save/Load mechanism for chunk modifications.
+- Implementing an infinite chunk-loading treadmill system around player.global_position.
+- Greedy Networking logic for multiplayer modifications.
