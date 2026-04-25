@@ -6,6 +6,7 @@ extends CharacterBody3D
 @export var brick_scene: PackedScene = preload("res://brick.tscn")
 @export var build_range: float = 2.0
 @export var place_volume_db: float = -16.0
+@export var remove_volume_db: float = -12.0
 @export var footstep_interval: float = 0.32
 @export var footstep_volume_db: float = -14.0
 @export var footstep_pitch_min: float = 0.92
@@ -17,7 +18,8 @@ var color_index: int = 0
 @onready var preview_brick = get_parent().get_node("PreviewBrick")
 
 # PRELOAD ASSETS (Loads once at start, not every click)
-@onready var place_sfx = preload("res://click.wav")
+@onready var place_sfx = preload("res://kick.wav")
+@onready var remove_sfx = preload("res://swipe.wav")
 @onready var footstep_sfx_c = preload("res://Steps_gravel-005.ogg")
 @onready var footstep_sfx_d = preload("res://Steps_gravel-006.ogg")
 @onready var footstep_sfx_a = preload("res://Steps_gravel-017.ogg")
@@ -273,6 +275,12 @@ func remove_brick():
 		# result.collider is the Brick node we hit
 		# We check if it's NOT the floor (we don't want to delete the floor!)
 		if result.collider.name != "Floor":
+			var sfx = AudioStreamPlayer.new()
+			sfx.stream = remove_sfx
+			sfx.volume_db = remove_volume_db
+			get_tree().root.add_child(sfx)
+			sfx.play()
+			sfx.finished.connect(sfx.queue_free)
 			result.collider.queue_free() # This deletes the node
 
 

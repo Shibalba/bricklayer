@@ -126,18 +126,6 @@ shadow_enabled = true
 shadow_bias = 0.02
 shadow_normal_bias = 1.0
 
-[node name="Floor" type="StaticBody3D" parent="." unique_id=1306167417]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
-physics_material_override = SubResource("PhysicsMaterial_lquwl")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Floor" unique_id=377108446]
-visible = false
-mesh = SubResource("BoxMesh_7mycd")
-surface_material_override/0 = SubResource("StandardMaterial3D_h2yge")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor" unique_id=526340134]
-shape = SubResource("ConvexPolygonShape3D_ig7tw")
-
 [node name="GroundGenerator" type="Node3D" parent="." unique_id=2024257588]
 script = ExtResource("6_e1t97")
 
