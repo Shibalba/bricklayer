@@ -5,6 +5,11 @@ extends CharacterBody3D
 @export var stick_look_speed = 2.5
 @export var brick_scene: PackedScene = preload("res://brick.tscn")
 @export var build_range: float = 2.0
+@export var footstep_interval: float = 0.32
+@export var footstep_volume_db: float = -14.0
+@export var footstep_pitch_min: float = 0.92
+@export var footstep_pitch_max: float = 1.08
+@export var jump_volume_db: float = -10.0
 var color_index: int = 0
 
 @onready var camera = $Head/Camera3D
@@ -12,6 +17,8 @@ var color_index: int = 0
 
 # PRELOAD ASSETS (Loads once at start, not every click)
 @onready var place_sfx = preload("res://click.wav")
+@onready var footstep_sfx = preload("res://click.wav")
+@onready var jump_sfx = preload("res://click.wav")
 @onready var anim_player = $AnimationPlayer
 
 # CACHE THE BRICKS FOLDER (Faster and safer than get_tree)
@@ -25,6 +32,8 @@ const JUMP_VELOCITY = 4.5
 const BRICK_SIZE = 0.5
 const HALF_BRICK = BRICK_SIZE * 0.5
 var current_color: Color = Color.DARK_RED
+var footstep_timer: float = 0.0
+var footstep_player: AudioStreamPlayer
 
 
 func _snap_to_grid(pos: Vector3) -> Vector3:
@@ -37,6 +46,10 @@ func _snap_to_grid(pos: Vector3) -> Vector3:
 
 func _ready():
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	footstep_player = AudioStreamPlayer.new()
+	footstep_player.stream = footstep_sfx
+	footstep_player.volume_db = footstep_volume_db
+	add_child(footstep_player)
 
 
 func _input(event: InputEvent) -> void:
@@ -99,6 +112,7 @@ func _physics_process(delta: float) -> void:
 	# Handle jump.
 	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = JUMP_VELOCITY
+		_play_jump_sound()
 
 	# --- GAMEPAD CAMERA LOOK ---
 	# Poll analog stick input for camera control (frame-rate independent)
@@ -122,7 +136,37 @@ func _physics_process(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, 0, SPEED)
 
 	move_and_slide()
+	_update_footsteps(delta)
 	update_preview()
+
+
+func _update_footsteps(delta: float) -> void:
+	if get_tree().paused:
+		return
+
+	var horizontal_speed = Vector2(velocity.x, velocity.z).length()
+	var is_walking = is_on_floor() and horizontal_speed > 0.15
+
+	if not is_walking:
+		footstep_timer = 0.0
+		return
+
+	footstep_timer -= delta
+	if footstep_timer > 0.0:
+		return
+
+	footstep_player.pitch_scale = randf_range(footstep_pitch_min, footstep_pitch_max)
+	footstep_player.play()
+	footstep_timer = footstep_interval
+
+
+func _play_jump_sound() -> void:
+	var sfx = AudioStreamPlayer.new()
+	sfx.stream = jump_sfx
+	sfx.volume_db = jump_volume_db
+	add_child(sfx)
+	sfx.play()
+	sfx.finished.connect(sfx.queue_free)
 
 
 func update_preview():
