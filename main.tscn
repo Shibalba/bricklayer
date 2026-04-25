@@ -4,9 +4,9 @@
 [ext_resource type="Script" uid="uid://dk8pns77uwlff" path="res://player.gd" id="1_ig7tw"]
 [ext_resource type="Texture2D" uid="uid://buabfdshtghnl" path="res://Terrain12_img.jpg" id="2_1bvp3"]
 [ext_resource type="Script" uid="uid://505lvloaswbs" path="res://pause_menu.gd" id="3_h2yge"]
-[ext_resource type="Script" path="res://controls_overlay.gd" id="4_1x8sf"]
+[ext_resource type="Script" uid="uid://bqqx83a7di8v8" path="res://controls_overlay.gd" id="4_1x8sf"]
 [ext_resource type="PackedScene" path="res://birch_tree.tscn" id="5_2d8qk"]
-[ext_resource type="Script" path="res://ground_generator.gd" id="6_e1t97"]
+[ext_resource type="Script" uid="uid://b7snmy1w53vl3" path="res://ground_generator.gd" id="6_e1t97"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_0xm2m"]
 
@@ -16,8 +16,10 @@ sky_material = SubResource("ProceduralSkyMaterial_0xm2m")
 [sub_resource type="Environment" id="Environment_1bvp3"]
 background_mode = 2
 sky = SubResource("Sky_h2yge")
+ssao_enabled = true
+ssil_enabled = true
 sdfgi_enabled = true
-volumetric_fog_enabled = true
+fog_enabled = true
 volumetric_fog_density = 0.02
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_lquwl"]
@@ -98,9 +100,17 @@ size = Vector3(1, 2, 1)
 size = Vector3(0.5, 0.5, 0.5)
 
 [sub_resource type="Shader" id="Shader_1bvp3"]
-code = "shader_type spatial;\nrender_mode unshaded, wireframe, cull_disabled;\n\nvoid fragment() {\n\tALBEDO = vec3(0.0, 0.0, 0.0);\n\tALPHA = 1.0;\n}\n"
+code = "shader_type spatial;
+render_mode unshaded, wireframe, cull_disabled;
+
+void fragment() {
+	ALBEDO = vec3(0.0, 0.0, 0.0);
+	ALPHA = 1.0;
+}
+"
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_1bvp3"]
+render_priority = 0
 shader = SubResource("Shader_1bvp3")
 
 [node name="Main" type="Node3D" unique_id=1609097307]
@@ -128,21 +138,21 @@ surface_material_override/0 = SubResource("StandardMaterial3D_h2yge")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor" unique_id=526340134]
 shape = SubResource("ConvexPolygonShape3D_ig7tw")
 
-[node name="GroundGenerator" type="Node3D" parent="."]
+[node name="GroundGenerator" type="Node3D" parent="." unique_id=2024257588]
 script = ExtResource("6_e1t97")
 
-[node name="Blocks" type="Node3D" parent="GroundGenerator"]
+[node name="Blocks" type="Node3D" parent="GroundGenerator" unique_id=1267028084]
 
-[node name="BirchTreeA" parent="." instance=ExtResource("5_2d8qk")]
+[node name="BirchTreeA" parent="." unique_id=500066435 instance=ExtResource("5_2d8qk")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 8)
 
-[node name="BirchTreeB" parent="." instance=ExtResource("5_2d8qk")]
+[node name="BirchTreeB" parent="." unique_id=1265334508 instance=ExtResource("5_2d8qk")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, 6)
 
-[node name="BirchTreeC" parent="." instance=ExtResource("5_2d8qk")]
+[node name="BirchTreeC" parent="." unique_id=1831927946 instance=ExtResource("5_2d8qk")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, -9)
 
-[node name="BirchTreeD" parent="." instance=ExtResource("5_2d8qk")]
+[node name="BirchTreeD" parent="." unique_id=252883719 instance=ExtResource("5_2d8qk")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0, -12)
 
 [node name="Player" type="CharacterBody3D" parent="." unique_id=1941755123]
@@ -205,83 +215,6 @@ grow_vertical = 2
 color = Color(0, 0, 0, 0.5)
 script = ExtResource("3_h2yge")
 
-[node name="ControlsOverlay" type="ColorRect" parent="CanvasLayer"]
-visible = false
-process_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-color = Color(0, 0, 0, 0.65)
-script = ExtResource("4_1x8sf")
-
-[node name="Panel" type="PanelContainer" parent="CanvasLayer/ControlsOverlay"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -360.0
-offset_top = -220.0
-offset_right = 360.0
-offset_bottom = 220.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Margin" type="MarginContainer" parent="CanvasLayer/ControlsOverlay/Panel"]
-layout_mode = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 20
-
-[node name="Content" type="VBoxContainer" parent="CanvasLayer/ControlsOverlay/Panel/Margin"]
-layout_mode = 2
-
-[node name="Title" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 26
-text = "Controls"
-horizontal_alignment = 1
-
-[node name="Hint" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content"]
-layout_mode = 2
-text = "Press F1 to close"
-horizontal_alignment = 1
-
-[node name="Columns" type="HBoxContainer" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content"]
-layout_mode = 2
-theme_override_constants/separation = 30
-
-[node name="KeyboardColumn" type="VBoxContainer" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="KeyboardTitle" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns/KeyboardColumn"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 20
-text = "Mouse + Keyboard"
-
-[node name="KeyboardText" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns/KeyboardColumn"]
-layout_mode = 2
-autowrap_mode = 3
-
-[node name="GamepadColumn" type="VBoxContainer" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="GamepadTitle" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns/GamepadColumn"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 20
-text = "Gamepad"
-
-[node name="GamepadText" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns/GamepadColumn"]
-layout_mode = 2
-autowrap_mode = 3
-
 [node name="MainButtons" type="VBoxContainer" parent="CanvasLayer/PauseMenu" unique_id=1117693403]
 layout_mode = 1
 anchors_preset = 8
@@ -304,7 +237,7 @@ text = "Continue"
 layout_mode = 2
 text = "Settings"
 
-[node name="ControlsButton" type="Button" parent="CanvasLayer/PauseMenu/MainButtons"]
+[node name="ControlsButton" type="Button" parent="CanvasLayer/PauseMenu/MainButtons" unique_id=252867402]
 layout_mode = 2
 text = "Controls"
 
@@ -357,7 +290,7 @@ layout_mode = 2
 layout_mode = 2
 text = "Max FPS: "
 
-[node name="FpsButton" type="OptionButton" parent="CanvasLayer/PauseMenu/SettingsPage/FpsRow" unique_id=9876543210]
+[node name="FpsButton" type="OptionButton" parent="CanvasLayer/PauseMenu/SettingsPage/FpsRow" unique_id=1286608618]
 layout_mode = 2
 item_count = 5
 popup/item_0/text = "30"
@@ -378,6 +311,83 @@ text = "Fullscreen"
 [node name="BackButton" type="Button" parent="CanvasLayer/PauseMenu/SettingsPage" unique_id=882544404]
 layout_mode = 2
 text = "< Back"
+
+[node name="ControlsOverlay" type="ColorRect" parent="CanvasLayer" unique_id=1219503740]
+process_mode = 3
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.65)
+script = ExtResource("4_1x8sf")
+
+[node name="Panel" type="PanelContainer" parent="CanvasLayer/ControlsOverlay" unique_id=626845206]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -360.0
+offset_top = -220.0
+offset_right = 360.0
+offset_bottom = 220.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="CanvasLayer/ControlsOverlay/Panel" unique_id=641324263]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="Content" type="VBoxContainer" parent="CanvasLayer/ControlsOverlay/Panel/Margin" unique_id=572179311]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content" unique_id=2020512840]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "Controls"
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content" unique_id=1721972193]
+layout_mode = 2
+text = "Press F1 to close"
+horizontal_alignment = 1
+
+[node name="Columns" type="HBoxContainer" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content" unique_id=1394501735]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="KeyboardColumn" type="VBoxContainer" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns" unique_id=53847539]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="KeyboardTitle" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns/KeyboardColumn" unique_id=721994448]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Mouse + Keyboard"
+
+[node name="KeyboardText" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns/KeyboardColumn" unique_id=845983419]
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="GamepadColumn" type="VBoxContainer" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns" unique_id=276557755]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="GamepadTitle" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns/GamepadColumn" unique_id=1290260552]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Gamepad"
+
+[node name="GamepadText" type="Label" parent="CanvasLayer/ControlsOverlay/Panel/Margin/Content/Columns/GamepadColumn" unique_id=1378737317]
+layout_mode = 2
+autowrap_mode = 3
 
 [node name="Bricks" type="Node3D" parent="." unique_id=100805324]
 unique_name_in_owner = true
