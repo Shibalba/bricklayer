@@ -71,9 +71,23 @@ func _build_leaves() -> void:
 					continue
 				if layer == 0 and x == 0 and z == 0:
 					continue
-				_add_voxel(Vector3(x, y, z), leaf_mat)
+				_add_leaf_voxel(Vector3(x, y, z), leaf_mat)
 
-	_add_voxel(Vector3(0, top_y + leaf_layers, 0), leaf_mat)
+	_add_leaf_voxel(Vector3(0, top_y + leaf_layers, 0), leaf_mat)
+
+
+# Leaves are visual-only — no collision or physics body needed.
+# Reduces Jolt body count by ~25 per tree (10 trees = ~250 fewer bodies).
+func _add_leaf_voxel(grid_pos: Vector3, material: StandardMaterial3D) -> void:
+	var mesh_instance = MeshInstance3D.new()
+	mesh_instance.mesh = voxel_mesh
+	mesh_instance.material_override = material
+	mesh_instance.position = Vector3(
+		grid_pos.x * block_size,
+		trunk_base_y + grid_pos.y * block_size,
+		grid_pos.z * block_size
+	)
+	blocks.add_child(mesh_instance)
 
 
 func _add_voxel(grid_pos: Vector3, material: StandardMaterial3D) -> StaticBody3D:

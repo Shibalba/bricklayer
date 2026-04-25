@@ -9,19 +9,24 @@ extends Node3D
 
 @onready var blocks = $Blocks
 
-var _height_map: Dictionary = {}
+var _height_array: PackedInt32Array
+var _fill_set: Dictionary = {}       # Vector3i -> Vector3 (world position)
+var _surface_blocks: Dictionary = {} # Vector3i -> StaticBody3D
+var _fill_mmi: MultiMeshInstance3D
 var _start_x: float = 0.0
 var _start_z: float = 0.0
-var _fill_blocks: Dictionary = {}    # Vector3i -> MeshInstance3D
-var _surface_blocks: Dictionary = {} # Vector3i -> StaticBody3D
+var _tree_nodes: Array = []
 
-# Shared mesh/material for interior fill blocks (no physics, visual only)
+# Shared mesh/material for interior fill blocks (rendered as one MultiMesh draw call)
 var _fill_mesh: BoxMesh
 var _fill_mat_grass: StandardMaterial3D
 var _fill_mat_dirt: StandardMaterial3D
 
 
 func _ready() -> void:
+	for child in get_parent().get_children():
+		if child.name.begins_with("BirchTree"):
+			_tree_nodes.append(child)
 	_build_fill_resources()
 	_generate_ground()
 	_snap_trees_to_terrain()
@@ -43,27 +48,24 @@ func _build_fill_resources() -> void:
 func get_height_at(world_x: float, world_z: float) -> float:
 	var xi = int(round((world_x - _start_x) / block_size))
 	var zi = int(round((world_z - _start_z) / block_size))
-	var key = Vector2i(xi, zi)
-	if _height_map.has(key):
-		return _height_map[key] * block_size
-	return 0.0
+	if xi < 0 or xi >= width or zi < 0 or zi >= depth:
+		return 0.0
+	return _height_array[zi * width + xi] * block_size
 
 
 func _snap_trees_to_terrain() -> void:
-	for child in get_parent().get_children():
-		if child.name.begins_with("BirchTree"):
-			child.global_position.y = get_height_at(child.global_position.x, child.global_position.z)
+	for tree in _tree_nodes:
+		tree.global_position.y = get_height_at(tree.global_position.x, tree.global_position.z)
 
 
 func on_surface_removed(grid_pos: Vector3i) -> void:
 	_surface_blocks.erase(grid_pos)
 	var below = Vector3i(grid_pos.x, grid_pos.y - 1, grid_pos.z)
-	if not _fill_blocks.has(below):
+	if not _fill_set.has(below):
 		return
-	# Promote the fill block below into a real collidable surface block
-	var fill_node: MeshInstance3D = _fill_blocks[below]
-	_fill_blocks.erase(below)
-	fill_node.queue_free()
+	# Promote the fill voxel below into a real collidable surface block
+	_fill_set.erase(below)
+	_rebuild_fill_multimesh()
 	var new_surface = block_scene.instantiate()
 	new_surface.position = Vector3(
 		_start_x + below.x * block_size,
@@ -76,13 +78,38 @@ func on_surface_removed(grid_pos: Vector3i) -> void:
 	blocks.add_child(new_surface)
 
 
+func _rebuild_fill_multimesh() -> void:
+	if _fill_mmi == null:
+		_fill_mmi = MultiMeshInstance3D.new()
+		blocks.add_child(_fill_mmi)
+	# Only render fills with at least one exposed horizontal face.
+	# A fill at (xi, yi, zi) is occluded on a side if _fill_set contains that neighbor.
+	# Out-of-bounds neighbors are never in _fill_set, so edge fills are always exposed.
+	var visible_positions: Array = []
+	for key in _fill_set:
+		if not _fill_set.has(Vector3i(key.x - 1, key.y, key.z)) \
+		or not _fill_set.has(Vector3i(key.x + 1, key.y, key.z)) \
+		or not _fill_set.has(Vector3i(key.x, key.y, key.z - 1)) \
+		or not _fill_set.has(Vector3i(key.x, key.y, key.z + 1)):
+			visible_positions.append(_fill_set[key])
+	var mm = MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = _fill_mesh
+	mm.instance_count = visible_positions.size()
+	for i in visible_positions.size():
+		mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, visible_positions[i]))
+	_fill_mmi.multimesh = mm
+	_fill_mmi.material_override = _fill_mat_dirt
+
+
 func _generate_ground() -> void:
 	for child in blocks.get_children():
 		child.queue_free()
 
-	_height_map.clear()
-	_fill_blocks.clear()
+	_height_array.resize(width * depth)
+	_fill_set.clear()
 	_surface_blocks.clear()
+	_fill_mmi = null  # queue_freed above with blocks.get_children()
 
 	_start_x = -floor(width * 0.5) * block_size
 	_start_z = -floor(depth * 0.5) * block_size
@@ -108,7 +135,7 @@ func _generate_ground() -> void:
 				  + noise_small.get_noise_2d(world_x, world_z) * 0.3
 
 			var height_blocks = int(round(n * terrain_amplitude))
-			_height_map[Vector2i(xi, zi)] = height_blocks
+			_height_array[zi * width + xi] = height_blocks
 
 			# Surface block: full StaticBody3D with collision — harvestable via raycast
 			var surface = block_scene.instantiate()
@@ -119,14 +146,9 @@ func _generate_ground() -> void:
 			_surface_blocks[surf_key] = surface
 			blocks.add_child(surface)
 
-			# Interior fill: visual-only MeshInstance3D, no physics body
-			# Avoids ~90k StaticBody3D overwhelming Jolt physics init
+			# Interior fill: tracked by position, rendered as one MultiMesh draw call
 			for yi in range(-terrain_amplitude, height_blocks):
-				var fill = MeshInstance3D.new()
-				fill.mesh = _fill_mesh
-				# Top visible face uses grass colour, rest use dirt
-				fill.material_override = _fill_mat_dirt
-				fill.position = Vector3(world_x, yi * block_size, world_z)
 				var fill_key = Vector3i(xi, yi, zi)
-				_fill_blocks[fill_key] = fill
-				blocks.add_child(fill)
+				_fill_set[fill_key] = Vector3(world_x, yi * block_size, world_z)
+
+	_rebuild_fill_multimesh()

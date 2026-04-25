@@ -9,8 +9,21 @@ const COLOR_EMPTY = Color(0.15, 0.15, 0.15)
 const COLOR_SELECTED_BORDER = Color(0.0, 0.0, 0.0)
 const COLOR_NORMAL_BORDER = Color(0.35, 0.35, 0.35)
 
+var _style_selected: StyleBoxFlat
+var _style_normal: StyleBoxFlat
+
 
 func _ready() -> void:
+	_style_selected = StyleBoxFlat.new()
+	_style_selected.draw_center = false
+	_style_selected.border_color = COLOR_SELECTED_BORDER
+	_style_selected.set_border_width_all(3)
+
+	_style_normal = StyleBoxFlat.new()
+	_style_normal.draw_center = false
+	_style_normal.border_color = COLOR_NORMAL_BORDER
+	_style_normal.set_border_width_all(1)
+
 	player.inventory_changed.connect(_refresh_slots)
 	_refresh_slots()
 
@@ -40,21 +53,16 @@ func _refresh_slots() -> void:
 		else:
 			count_label.visible = false
 
-		# Update border (selected slot gets black border)
-		var style = StyleBoxFlat.new()
-		style.draw_center = false
-		var border_width: int
+		# Update border using pre-allocated styles (no allocation per frame)
 		if i == player.selected_slot:
-			style.border_color = COLOR_SELECTED_BORDER
-			border_width = 3
+			panel.add_theme_stylebox_override("panel", _style_selected)
+			icon.offset_left = 3
+			icon.offset_top = 3
+			icon.offset_right = -3
+			icon.offset_bottom = -3
 		else:
-			style.border_color = COLOR_NORMAL_BORDER
-			border_width = 1
-		style.set_border_width_all(border_width)
-		panel.add_theme_stylebox_override("panel", style)
-
-		# Inset the Icon so the border is not covered by it
-		icon.offset_left = border_width
-		icon.offset_top = border_width
-		icon.offset_right = -border_width
-		icon.offset_bottom = -border_width
+			panel.add_theme_stylebox_override("panel", _style_normal)
+			icon.offset_left = 1
+			icon.offset_top = 1
+			icon.offset_right = -1
+			icon.offset_bottom = -1

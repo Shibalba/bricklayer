@@ -54,6 +54,13 @@ var footstep_sfx_list: Array[AudioStream] = []
 var last_footstep_index: int = -1
 var was_on_floor_last_frame: bool = false
 var airborne_time: float = 0.0
+var _frame_ray: Dictionary = {}
+
+# Audio pool — 6 pre-allocated players cycled round-robin.
+# Eliminates per-sound AudioStreamPlayer alloc/free on every hit/place/break.
+const _AUDIO_POOL_SIZE = 6
+var _sfx_pool: Array[AudioStreamPlayer] = []
+var _sfx_pool_idx: int = 0
 
 
 func _snap_to_grid(pos: Vector3) -> Vector3:
@@ -136,6 +143,10 @@ func _ready():
 	footstep_player = AudioStreamPlayer.new()
 	footstep_player.volume_db = footstep_volume_db
 	add_child(footstep_player)
+	for _i in _AUDIO_POOL_SIZE:
+		var p = AudioStreamPlayer.new()
+		add_child(p)
+		_sfx_pool.append(p)
 	was_on_floor_last_frame = is_on_floor()
 	# Snap spawn position above terrain surface
 	var ground_gen = get_parent().get_node_or_null("GroundGenerator")
@@ -243,6 +254,16 @@ func _physics_process(delta: float) -> void:
 		was_on_floor_last_frame = false
 
 	_update_footsteps(delta)
+	# Shared raycast used by both update_preview and _process_mining
+	if not get_tree().paused:
+		var _space = get_world_3d().direct_space_state
+		var _from = camera.global_transform.origin
+		var _to = _from + (-camera.global_transform.basis.z * build_range)
+		var _q = PhysicsRayQueryParameters3D.create(_from, _to)
+		_q.exclude = [self.get_rid()]
+		_frame_ray = _space.intersect_ray(_q)
+	else:
+		_frame_ray = {}
 	_process_mining(delta)
 	update_preview()
 
@@ -284,42 +305,35 @@ func _pick_footstep_stream() -> AudioStream:
 	return footstep_sfx_list[next_index]
 
 
+func _get_sfx_player() -> AudioStreamPlayer:
+	var p = _sfx_pool[_sfx_pool_idx]
+	_sfx_pool_idx = (_sfx_pool_idx + 1) % _AUDIO_POOL_SIZE
+	return p
+
+
 func _play_jump_sound() -> void:
-	var sfx = AudioStreamPlayer.new()
+	var sfx = _get_sfx_player()
 	sfx.stream = jump_sfx
 	sfx.volume_db = jump_volume_db
-	add_child(sfx)
 	sfx.play()
-	sfx.finished.connect(sfx.queue_free)
 
 
 func _play_landing_sound() -> void:
-	var sfx = AudioStreamPlayer.new()
+	var sfx = _get_sfx_player()
 	sfx.stream = landing_sfx
 	sfx.volume_db = landing_volume_db
-	add_child(sfx)
 	sfx.play()
-	sfx.finished.connect(sfx.queue_free)
 
 
 func update_preview():
 	if not preview_brick:
 		return
 
-	var space_state = get_world_3d().direct_space_state
-	var from = camera.global_transform.origin
-	var to = from + (-camera.global_transform.basis.z * build_range)
-	var query = PhysicsRayQueryParameters3D.create(from, to)
-	query.exclude = [self.get_rid()]
-
-	var result = space_state.intersect_ray(query)
-	if result:
+	if _frame_ray:
 		preview_brick.visible = true
-		var n = result.normal.normalized()
-		var target_center = result.collider.global_transform.origin
+		var n = _frame_ray.normal.normalized()
+		var target_center = _frame_ray.collider.global_transform.origin
 		preview_brick.global_position = target_center + n * (HALF_BRICK + 0.01)
-
-		# Show only the targeted face by flattening one axis.
 		if abs(n.x) > 0.5:
 			preview_brick.scale = Vector3(0.02, 1.0, 1.0)
 		elif abs(n.y) > 0.5:
@@ -369,12 +383,10 @@ func place_block():
 
 		anim_player.play("place_brick")
 
-		var sfx = AudioStreamPlayer.new()
+		var sfx = _get_sfx_player()
 		sfx.stream = place_sfx
 		sfx.volume_db = place_volume_db
-		get_tree().root.add_child(sfx)
 		sfx.play()
-		sfx.finished.connect(sfx.queue_free)
 	else:
 		# No surface hit — return the block to inventory
 		add_to_inventory(block_type)
@@ -393,13 +405,7 @@ func _process_mining(delta: float) -> void:
 		current_hit_target = null
 		return
 
-	var space_state = get_world_3d().direct_space_state
-	var from = camera.global_transform.origin
-	var to = from + (-camera.global_transform.basis.z * build_range)
-	var query = PhysicsRayQueryParameters3D.create(from, to)
-	query.exclude = [self.get_rid()]
-	var result = space_state.intersect_ray(query)
-
+	var result = _frame_ray
 	if not result:
 		hit_timer = 0.0
 		current_hit_target = null
@@ -442,24 +448,20 @@ func _process_mining(delta: float) -> void:
 			if ground_gen:
 				ground_gen.call_deferred("on_surface_removed", target.get_meta("grid_pos"))
 		anim_player.play("remove_brick")
-		var sfx = AudioStreamPlayer.new()
+		var sfx = _get_sfx_player()
 		sfx.stream = remove_sfx
 		sfx.volume_db = remove_volume_db
-		get_tree().root.add_child(sfx)
 		sfx.play()
-		sfx.finished.connect(sfx.queue_free)
 		target.queue_free()
 		current_hit_target = null
 	else:
 		# Hit but not broken — tint and play lighter sound
 		_apply_damage_tint(target, hp, target.get_meta("max_hp"))
 		anim_player.play("remove_brick")
-		var sfx = AudioStreamPlayer.new()
+		var sfx = _get_sfx_player()
 		sfx.stream = remove_sfx
 		sfx.volume_db = hit_volume_db
-		get_tree().root.add_child(sfx)
 		sfx.play()
-		sfx.finished.connect(sfx.queue_free)
 
 
 func _on_back_button_pressed() -> void:
