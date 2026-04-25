@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://bmpuuvo1ivb4r"]
+
+[ext_resource type="Script" uid="uid://dsw2j803vt16h" path="res://dust_cloud.gd" id="1_eqc85"]
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_s2bei"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_4iqao"]
+radius = 0.1
+
+[node name="GPUParticles3D" type="Node3D" unique_id=948264419]
+
+[node name="DustCloud" type="GPUParticles3D" parent="." unique_id=1143626719]
+emitting = false
+amount = 10
+one_shot = true
+explosiveness = 1.0
+process_material = SubResource("ParticleProcessMaterial_s2bei")
+draw_pass_1 = SubResource("SphereMesh_4iqao")
+script = ExtResource("1_eqc85")

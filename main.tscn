@@ -1,0 +1,288 @@
+[gd_scene format=3 uid="uid://wmgvhlnv7t58"]
+
+[ext_resource type="Texture2D" uid="uid://d23qoc2cy53a2" path="res://Terrain11_img.jpg" id="1_0xm2m"]
+[ext_resource type="Script" uid="uid://dk8pns77uwlff" path="res://player.gd" id="1_ig7tw"]
+[ext_resource type="Texture2D" uid="uid://buabfdshtghnl" path="res://Terrain12_img.jpg" id="2_1bvp3"]
+[ext_resource type="Script" uid="uid://505lvloaswbs" path="res://pause_menu.gd" id="3_h2yge"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_0xm2m"]
+
+[sub_resource type="Sky" id="Sky_h2yge"]
+sky_material = SubResource("ProceduralSkyMaterial_0xm2m")
+
+[sub_resource type="Environment" id="Environment_1bvp3"]
+background_mode = 2
+sky = SubResource("Sky_h2yge")
+sdfgi_enabled = true
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.02
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_lquwl"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_7mycd"]
+lightmap_size_hint = Vector2i(504, 266)
+add_uv2 = true
+size = Vector3(50, 1, 50)
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_h2yge"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_h2yge"]
+albedo_texture = ExtResource("1_0xm2m")
+detail_enabled = true
+detail_mask = SubResource("NoiseTexture2D_h2yge")
+detail_uv_layer = 1
+detail_albedo = ExtResource("2_1bvp3")
+uv1_scale = Vector3(50, 50, 50)
+uv1_triplanar = true
+uv2_scale = Vector3(150, 150, 150)
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_ig7tw"]
+points = PackedVector3Array(-25, -0.25, -25, -25, 0.25, -25, 25, -0.25, -25, -25, -0.25, 25, -25, 0.25, 25, 25, 0.25, -25, 25, -0.25, 25, 25, 0.25, 25)
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_5vw27"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lquwl"]
+albedo_color = Color(0.94509804, 0.7607843, 0.49019608, 1)
+metallic_specular = 0.19
+
+[sub_resource type="BoxMesh" id="BoxMesh_1bvp3"]
+size = Vector3(0.2, 0.2, 0.8)
+
+[sub_resource type="Animation" id="Animation_h2yge"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Head/Camera3D/ArmAnchor:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0.5, -0.4, -0.3)]
+}
+
+[sub_resource type="Animation" id="Animation_1bvp3"]
+resource_name = "place_brick"
+length = 0.3
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Head/Camera3D/ArmAnchor:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.3),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector3(0.5, -0.3, -0.15), Vector3(0.5, -0.4, -0.25), Vector3(0.5, -0.3, -0.15)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_lquwl"]
+_data = {
+&"RESET": SubResource("Animation_h2yge"),
+&"place_brick": SubResource("Animation_1bvp3")
+}
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ig7tw"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_0xm2m"]
+material = SubResource("StandardMaterial3D_ig7tw")
+size = Vector3(1, 2, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_h2yge"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1bvp3"]
+transparency = 1
+albedo_color = Color(1, 1, 1, 0.4862745)
+
+[node name="Main" type="Node3D" unique_id=1609097307]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=493297539]
+environment = SubResource("Environment_1bvp3")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=617896456]
+transform = Transform3D(0.70710677, -0.49999997, 0.49999997, 0, 0.70710677, 0.70710677, -0.70710677, -0.49999997, 0.49999997, 0, 0, 0)
+light_color = Color(0.96862745, 0.6431373, 0.18039216, 1)
+light_energy = 1.2
+shadow_enabled = true
+shadow_bias = 0.02
+shadow_normal_bias = 1.0
+
+[node name="Floor" type="StaticBody3D" parent="." unique_id=1306167417]
+physics_material_override = SubResource("PhysicsMaterial_lquwl")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Floor" unique_id=377108446]
+mesh = SubResource("BoxMesh_7mycd")
+surface_material_override/0 = SubResource("StandardMaterial3D_h2yge")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor" unique_id=526340134]
+shape = SubResource("ConvexPolygonShape3D_ig7tw")
+
+[node name="Player" type="CharacterBody3D" parent="." unique_id=1941755123]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.7149963, 0)
+script = ExtResource("1_ig7tw")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player" unique_id=556174717]
+shape = SubResource("CapsuleShape3D_5vw27")
+
+[node name="Head" type="Node3D" parent="Player" unique_id=1219060794]
+
+[node name="Camera3D" type="Camera3D" parent="Player/Head" unique_id=1302631260]
+
+[node name="ArmAnchor" type="Node3D" parent="Player/Head/Camera3D" unique_id=1674053782]
+transform = Transform3D(0.9848077, -0.015134435, 0.1729874, 0, 0.9961947, 0.08715574, -0.17364818, -0.08583164, 0.98106027, 0.5, -0.4, -0.3)
+
+[node name="ArmMesh" type="MeshInstance3D" parent="Player/Head/Camera3D/ArmAnchor" unique_id=1828035558]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
+material_override = SubResource("StandardMaterial3D_lquwl")
+mesh = SubResource("BoxMesh_1bvp3")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Player" unique_id=1952495262]
+libraries/ = SubResource("AnimationLibrary_lquwl")
+playback_auto_capture_transition_type = 3
+
+[node name="Ref_Close" type="MeshInstance3D" parent="." unique_id=1871833405]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1, 0)
+visible = false
+mesh = SubResource("BoxMesh_0xm2m")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1091510037]
+
+[node name="CenterContainer" type="CenterContainer" parent="CanvasLayer" unique_id=1529643535]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ColorRect" type="ColorRect" parent="CanvasLayer/CenterContainer" unique_id=415256404]
+custom_minimum_size = Vector2(4, 4)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.32427296, 0.73015547, 0.2007398, 1)
+
+[node name="PauseMenu" type="ColorRect" parent="CanvasLayer" unique_id=1330373839]
+process_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.5)
+script = ExtResource("3_h2yge")
+
+[node name="MainButtons" type="VBoxContainer" parent="CanvasLayer/PauseMenu" unique_id=1117693403]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -34.0
+offset_right = 20.0
+offset_bottom = 34.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ContinueButton" type="Button" parent="CanvasLayer/PauseMenu/MainButtons" unique_id=328635807]
+layout_mode = 2
+text = "Continue"
+
+[node name="SettingsButton" type="Button" parent="CanvasLayer/PauseMenu/MainButtons" unique_id=2031141617]
+layout_mode = 2
+text = "Settings"
+
+[node name="RestartButton" type="Button" parent="CanvasLayer/PauseMenu/MainButtons" unique_id=1160817876]
+layout_mode = 2
+text = "Restart Game"
+
+[node name="QuitButton" type="Button" parent="CanvasLayer/PauseMenu/MainButtons" unique_id=1153966852]
+layout_mode = 2
+text = "Exit"
+
+[node name="SettingsPage" type="VBoxContainer" parent="CanvasLayer/PauseMenu" unique_id=1780674799]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -80.0
+offset_top = -50.5
+offset_right = 80.0
+offset_bottom = 50.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ResolutionRow" type="HBoxContainer" parent="CanvasLayer/PauseMenu/SettingsPage" unique_id=43371]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CanvasLayer/PauseMenu/SettingsPage/ResolutionRow" unique_id=234681869]
+layout_mode = 2
+text = "Resolution: "
+
+[node name="ResolutionButton" type="OptionButton" parent="CanvasLayer/PauseMenu/SettingsPage/ResolutionRow" unique_id=1583146863]
+layout_mode = 2
+item_count = 4
+popup/item_0/text = "1280x720"
+popup/item_0/id = 0
+popup/item_1/text = "1920x1080"
+popup/item_1/id = 1
+popup/item_2/text = "2560x1440"
+popup/item_2/id = 2
+popup/item_3/text = "3840x2160"
+popup/item_3/id = 3
+
+[node name="FpsRow" type="HBoxContainer" parent="CanvasLayer/PauseMenu/SettingsPage" unique_id=1234567890]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CanvasLayer/PauseMenu/SettingsPage/FpsRow" unique_id=234681870]
+layout_mode = 2
+text = "Max FPS: "
+
+[node name="FpsButton" type="OptionButton" parent="CanvasLayer/PauseMenu/SettingsPage/FpsRow" unique_id=9876543210]
+layout_mode = 2
+item_count = 5
+popup/item_0/text = "30"
+popup/item_0/id = 0
+popup/item_1/text = "60"
+popup/item_1/id = 1
+popup/item_2/text = "90"
+popup/item_2/id = 2
+popup/item_3/text = "120"
+popup/item_3/id = 3
+popup/item_4/text = "240"
+popup/item_4/id = 4
+
+[node name="FullscreenToggle" type="CheckButton" parent="CanvasLayer/PauseMenu/SettingsPage" unique_id=26981387]
+layout_mode = 2
+text = "Fullscreen"
+
+[node name="BackButton" type="Button" parent="CanvasLayer/PauseMenu/SettingsPage" unique_id=882544404]
+layout_mode = 2
+text = "< Back"
+
+[node name="Bricks" type="Node3D" parent="." unique_id=100805324]
+unique_name_in_owner = true
+
+[node name="PreviewBrick" type="MeshInstance3D" parent="." unique_id=564981442]
+mesh = SubResource("BoxMesh_h2yge")
+surface_material_override/0 = SubResource("StandardMaterial3D_1bvp3")
+
+[connection signal="pressed" from="CanvasLayer/PauseMenu/MainButtons/ContinueButton" to="CanvasLayer/PauseMenu" method="_on_continue_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/PauseMenu/MainButtons/SettingsButton" to="CanvasLayer/PauseMenu" method="_on_settings_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/PauseMenu/MainButtons/RestartButton" to="CanvasLayer/PauseMenu" method="_on_restart_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/PauseMenu/MainButtons/QuitButton" to="CanvasLayer/PauseMenu" method="_on_quit_button_pressed"]
+[connection signal="toggled" from="CanvasLayer/PauseMenu/SettingsPage/FullscreenToggle" to="CanvasLayer/PauseMenu" method="_on_fullscreen_toggle_toggled"]
+[connection signal="pressed" from="CanvasLayer/PauseMenu/SettingsPage/BackButton" to="CanvasLayer/PauseMenu" method="_on_back_button_pressed"]

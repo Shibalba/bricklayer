@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://kfmft01wchfv"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nkspu"]
+albedo_color = Color(1, 0.16470589, 0.09019608, 1)
+metallic = 0.2
+roughness = 0.7
+rim_enabled = true
+rim = 0.5
+
+[sub_resource type="BoxMesh" id="BoxMesh_awxk8"]
+material = SubResource("StandardMaterial3D_nkspu")
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_5p85m"]
+points = PackedVector3Array(0.5, 0.5, 0.5, 0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5, 0.5, -0.5, -0.5, -0.5, 0.5, -0.5, -0.5, -0.5)
+
+[node name="Node3D" type="Node3D" unique_id=1276581451]
+
+[node name="Brick" type="StaticBody3D" parent="." unique_id=42901140]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Brick" unique_id=951039823]
+mesh = SubResource("BoxMesh_awxk8")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Brick" unique_id=1706495124]
+shape = SubResource("ConvexPolygonShape3D_5p85m")
