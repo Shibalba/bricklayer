@@ -18,8 +18,10 @@ var _fill_mmi: MultiMeshInstance3D
 var _start_x: float
 var _start_z: float
 var tree_scene = preload("res://birch_tree.tscn")
+var _perf_debug_enabled: bool = true
+var _perf_spike_threshold_ms: float = 12.0
 
-func generate(c_pos: Vector2i, b_size: float, t_amp: int, n_large: FastNoiseLite, n_small: FastNoiseLite, b_scene: PackedScene, f_mesh: BoxMesh, mat_dirt: StandardMaterial3D) -> void:
+func generate(c_pos: Vector2i, b_size: float, t_amp: int, n_large: FastNoiseLite, n_small: FastNoiseLite, b_scene: PackedScene, f_mesh: BoxMesh, mat_dirt: StandardMaterial3D, perf_debug_enabled: bool = false, perf_spike_threshold_ms: float = 12.0) -> void:
 	chunk_pos = c_pos
 	block_size = b_size
 	terrain_amplitude = t_amp
@@ -28,6 +30,8 @@ func generate(c_pos: Vector2i, b_size: float, t_amp: int, n_large: FastNoiseLite
 	block_scene = b_scene
 	fill_mesh = f_mesh
 	fill_mat_dirt = mat_dirt
+	_perf_debug_enabled = perf_debug_enabled
+	_perf_spike_threshold_ms = perf_spike_threshold_ms
 	
 	_start_x = chunk_pos.x * CHUNK_SIZE * block_size
 	_start_z = chunk_pos.y * CHUNK_SIZE * block_size
@@ -35,15 +39,25 @@ func generate(c_pos: Vector2i, b_size: float, t_amp: int, n_large: FastNoiseLite
 	_generate_content()
 
 func _generate_content() -> void:
+	var chunk_start_us := Time.get_ticks_usec()
+	var noise_us := 0
+	var surface_us := 0
+	var tree_us := 0
+	var fill_us := 0
+	var tree_count := 0
+
 	for xi in range(CHUNK_SIZE):
 		for zi in range(CHUNK_SIZE):
 			var world_x = _start_x + xi * block_size
 			var world_z = _start_z + zi * block_size
 
+			var noise_start_us := Time.get_ticks_usec()
 			var n = noise_large.get_noise_2d(world_x, world_z) * 0.7 + noise_small.get_noise_2d(world_x, world_z) * 0.3
+			noise_us += Time.get_ticks_usec() - noise_start_us
 
 			var height_blocks = int(round(n * terrain_amplitude))
 
+			var surface_start_us := Time.get_ticks_usec()
 			var surface = block_scene.instantiate()
 			surface.position = Vector3(world_x, height_blocks * block_size, world_z)
 			surface.add_to_group("ground_block")
@@ -51,17 +65,40 @@ func _generate_content() -> void:
 			surface.set_meta("grid_pos", surf_key)
 			_surface_blocks[surf_key] = surface
 			add_child(surface)
+			surface_us += Time.get_ticks_usec() - surface_start_us
 
 			var r = abs(chunk_pos.x * 73 + chunk_pos.y * 127 + xi * 31 + zi * 17) % 266
 			if r == 0:
+				var tree_start_us := Time.get_ticks_usec()
 				var tree = tree_scene.instantiate()
 				tree.position = Vector3(world_x, height_blocks * block_size, world_z)
 				add_child(tree)
+				tree_count += 1
+				tree_us += Time.get_ticks_usec() - tree_start_us
 
+			var fill_start_us := Time.get_ticks_usec()
 			for yi in range(-terrain_amplitude, height_blocks):
 				var fill_key = Vector3i(chunk_pos.x * CHUNK_SIZE + xi, yi, chunk_pos.y * CHUNK_SIZE + zi)
 				_fill_set[fill_key] = Vector3(world_x, yi * block_size, world_z)
+			fill_us += Time.get_ticks_usec() - fill_start_us
+
+	var multimesh_start_us := Time.get_ticks_usec()
 	_rebuild_fill_multimesh()
+	var multimesh_us := Time.get_ticks_usec() - multimesh_start_us
+
+	if _perf_debug_enabled:
+		var total_ms := (Time.get_ticks_usec() - chunk_start_us) / 1000.0
+		if total_ms >= _perf_spike_threshold_ms:
+			print("[ChunkPerf] chunk=%s total=%.2fms noise=%.2fms surface=%.2fms trees=%.2fms fill=%.2fms mesh=%.2fms trees=%d" % [
+				str(chunk_pos),
+				total_ms,
+				noise_us / 1000.0,
+				surface_us / 1000.0,
+				tree_us / 1000.0,
+				fill_us / 1000.0,
+				multimesh_us / 1000.0,
+				tree_count
+			])
 
 func on_block_placed(snapped_pos: Vector3, placed_grid_pos: Vector3i, player_bricks_node: Node3D) -> void:
 	var adjacent_offsets = [
@@ -151,6 +188,8 @@ func _rebuild_fill_multimesh() -> void:
 	for key in _fill_set:
 		if not _fill_set.has(Vector3i(key.x - 1, key.y, key.z)) \
 		or not _fill_set.has(Vector3i(key.x + 1, key.y, key.z)) \
+		or not _fill_set.has(Vector3i(key.x, key.y - 1, key.z)) \
+		or not _fill_set.has(Vector3i(key.x, key.y + 1, key.z)) \
 		or not _fill_set.has(Vector3i(key.x, key.y, key.z - 1)) \
 		or not _fill_set.has(Vector3i(key.x, key.y, key.z + 1)):
 			visible_positions.append(_fill_set[key])
