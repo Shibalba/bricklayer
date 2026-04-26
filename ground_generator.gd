@@ -6,10 +6,13 @@ extends Node3D
 @export var noise_seed: int = 42
 @export var render_distance: int = 2
 @export var chunk_load_budget_ms: float = 6.0
-@export var max_chunks_loaded_per_frame: int = 1
+@export var max_chunks_loaded_per_frame: int = 2
 @export var max_chunks_unloaded_per_frame: int = 3
 @export var perf_debug_enabled: bool = true
 @export var perf_spike_threshold_ms: float = 12.0
+@export var perf_frame_budget_target_ms: float = 16.6
+@export var perf_log_queue_age_stats: bool = true
+@export var perf_stage_log_threshold_ms: float = 2.0
 
 @onready var blocks = $Blocks
 var chunk_scene = preload("res://terrain_chunk.gd")
@@ -20,9 +23,12 @@ var _fill_mat_dirt: StandardMaterial3D
 var noise_large: FastNoiseLite
 var noise_small: FastNoiseLite
 var _player: Node3D
+var _loading_chunks: Dictionary = {}
 var _load_queue: Array[Vector2i] = []
 var _queued_lookup: Dictionary = {}
+var _queue_enter_us: Dictionary = {}
 var _queue_sort_origin: Vector2i = Vector2i.ZERO
+var _last_queue_age_log_us: int = 0
 
 func _ready() -> void:
 	if has_node("../Player"):
@@ -54,7 +60,7 @@ func _update_chunks() -> void:
 		for z in range(-render_distance, render_distance + 1):
 			var c_pos: Vector2i = player_chunk + Vector2i(x, z)
 			active_chunks_lookup[c_pos] = true
-			if not _chunks.has(c_pos) and not _queued_lookup.has(c_pos):
+			if not _chunks.has(c_pos) and not _queued_lookup.has(c_pos) and not _loading_chunks.has(c_pos):
 				missing_chunks.append(c_pos)
 
 	_queue_sort_origin = player_chunk
@@ -63,7 +69,11 @@ func _update_chunks() -> void:
 		_queue_chunk_load(c_pos)
 
 	_prune_load_queue(active_chunks_lookup)
-	var loaded_count := _process_load_queue()
+	var queue_stats: Dictionary = _process_load_queue()
+	var loaded_count: int = queue_stats["loaded"] as int
+	var processed_steps: int = queue_stats["processed_steps"] as int
+	var requeued_count: int = queue_stats["requeued"] as int
+	var budget_hit: bool = queue_stats["budget_hit"] as bool
 				
 	var chunks_to_remove: Array[Vector2i] = []
 	for c_pos_variant in _chunks.keys():
@@ -77,10 +87,26 @@ func _update_chunks() -> void:
 		_chunks[c_pos].queue_free()
 		_chunks.erase(c_pos)
 
+	var loading_to_remove: Array[Vector2i] = []
+	for c_pos_variant in _loading_chunks.keys():
+		var c_pos: Vector2i = c_pos_variant as Vector2i
+		if not active_chunks_lookup.has(c_pos):
+			loading_to_remove.append(c_pos)
+
+	for c_pos in loading_to_remove:
+		var loading_chunk: TerrainChunk = _loading_chunks[c_pos] as TerrainChunk
+		if loading_chunk:
+			loading_chunk.queue_free()
+		_loading_chunks.erase(c_pos)
+		_queue_enter_us.erase(c_pos)
+
+	_log_queue_age_stats_if_needed()
+
 	if perf_debug_enabled:
-		var elapsed_ms := (Time.get_ticks_usec() - frame_start_us) / 1000.0
-		if loaded_count > 0 or unload_count > 0 or elapsed_ms >= perf_spike_threshold_ms:
-			print("[ChunkPerf] frame=%.2fms loaded=%d unloaded=%d queued=%d" % [elapsed_ms, loaded_count, unload_count, _load_queue.size()])
+		var elapsed_ms: float = (Time.get_ticks_usec() - frame_start_us) / 1000.0
+		var frame_over_budget: bool = elapsed_ms > perf_frame_budget_target_ms
+		if loaded_count > 0 or unload_count > 0 or loading_to_remove.size() > 0 or budget_hit or frame_over_budget or elapsed_ms >= perf_spike_threshold_ms:
+			print("[ChunkPerf] frame=%.2fms loaded=%d processed_steps=%d requeued=%d budget_hit=%s frame_over_budget=%s unloaded=%d loading_unloaded=%d queued=%d loading=%d" % [elapsed_ms, loaded_count, processed_steps, requeued_count, str(budget_hit), str(frame_over_budget), unload_count, loading_to_remove.size(), _load_queue.size(), _loading_chunks.size()])
 
 
 func _compare_chunk_distance(a: Vector2i, b: Vector2i) -> bool:
@@ -88,8 +114,10 @@ func _compare_chunk_distance(a: Vector2i, b: Vector2i) -> bool:
 
 
 func _queue_chunk_load(c_pos: Vector2i) -> void:
-	if _chunks.has(c_pos) or _queued_lookup.has(c_pos):
+	if _chunks.has(c_pos) or _queued_lookup.has(c_pos) or _loading_chunks.has(c_pos):
 		return
+	if not _queue_enter_us.has(c_pos):
+		_queue_enter_us[c_pos] = Time.get_ticks_usec()
 	_load_queue.append(c_pos)
 	_queued_lookup[c_pos] = true
 
@@ -104,48 +132,115 @@ func _prune_load_queue(active_chunks_lookup: Dictionary) -> void:
 			kept.append(c_pos)
 		else:
 			_queued_lookup.erase(c_pos)
+			_queue_enter_us.erase(c_pos)
 	_load_queue = kept
 
 
-func _process_load_queue() -> int:
+func _process_load_queue() -> Dictionary:
 	if max_chunks_loaded_per_frame <= 0:
-		return 0
+		return {
+			"loaded": 0,
+			"processed_steps": 0,
+			"requeued": 0,
+			"budget_hit": false
+		}
 
-	var loaded_count := 0
-	var budget_start_us := Time.get_ticks_usec()
+	var loaded_count: int = 0
+	var processed_steps: int = 0
+	var requeued_count: int = 0
+	var budget_hit: bool = false
+	var budget_start_us: int = Time.get_ticks_usec()
 
-	while not _load_queue.is_empty() and loaded_count < max_chunks_loaded_per_frame:
-		if loaded_count > 0:
-			var elapsed_ms := (Time.get_ticks_usec() - budget_start_us) / 1000.0
-			if elapsed_ms >= chunk_load_budget_ms:
-				break
+	while not _load_queue.is_empty() and processed_steps < max_chunks_loaded_per_frame:
+		var elapsed_ms: float = (Time.get_ticks_usec() - budget_start_us) / 1000.0
+		if elapsed_ms >= chunk_load_budget_ms:
+			budget_hit = true
+			break
 
 		var c_pos: Vector2i = _load_queue.pop_front() as Vector2i
 		_queued_lookup.erase(c_pos)
 		if _chunks.has(c_pos):
 			continue
 
+		var chunk: TerrainChunk = _get_or_create_loading_chunk(c_pos)
+		if not chunk:
+			continue
+
 		var chunk_start_us := Time.get_ticks_usec()
-		_load_chunk(c_pos)
-		loaded_count += 1
+		var complete: bool = chunk.process_generation_step()
+		processed_steps += 1
+
+		if complete:
+			var compute_ms: float = chunk.get_compute_ms()
+			var latency_ms: float = chunk.get_latency_ms()
+			_loading_chunks.erase(c_pos)
+			_chunks[c_pos] = chunk
+			_queue_enter_us.erase(c_pos)
+			loaded_count += 1
+			if perf_debug_enabled and (compute_ms >= perf_spike_threshold_ms or latency_ms >= perf_spike_threshold_ms):
+				print("[ChunkPerf] chunk=%s compute=%.2fms latency=%.2fms" % [str(c_pos), compute_ms, latency_ms])
+		else:
+			_load_queue.append(c_pos)
+			_queued_lookup[c_pos] = true
+			requeued_count += 1
 
 		if perf_debug_enabled:
-			var chunk_elapsed_ms := (Time.get_ticks_usec() - chunk_start_us) / 1000.0
+			var chunk_elapsed_ms: float = (Time.get_ticks_usec() - chunk_start_us) / 1000.0
 			if chunk_elapsed_ms >= perf_spike_threshold_ms:
-				print("[ChunkPerf] chunk=%s load=%.2fms" % [str(c_pos), chunk_elapsed_ms])
+				print("[ChunkPerf] chunk=%s step=%.2fms complete=%s" % [str(c_pos), chunk_elapsed_ms, str(complete)])
 
-	return loaded_count
+	return {
+		"loaded": loaded_count,
+		"processed_steps": processed_steps,
+		"requeued": requeued_count,
+		"budget_hit": budget_hit
+	}
 
 func _get_chunk_pos_from_world(world_pos: Vector3) -> Vector2i:
 	var grid_pos: Vector3i = _get_grid_pos_from_world(world_pos)
 	return Vector2i(floor(float(grid_pos.x) / 16.0), floor(float(grid_pos.z) / 16.0))
 
-func _load_chunk(c_pos: Vector2i) -> void:
-	var chunk = Node3D.new()
-	chunk.set_script(chunk_scene)
+func _get_or_create_loading_chunk(c_pos: Vector2i) -> TerrainChunk:
+	if _loading_chunks.has(c_pos):
+		return _loading_chunks[c_pos] as TerrainChunk
+
+	var chunk := TerrainChunk.new()
 	blocks.add_child(chunk)
-	chunk.generate(c_pos, block_size, terrain_amplitude, noise_large, noise_small, block_scene, _fill_mesh, _fill_mat_dirt, perf_debug_enabled, perf_spike_threshold_ms)
-	_chunks[c_pos] = chunk
+	var queue_enter_us: int = _queue_enter_us[c_pos] as int if _queue_enter_us.has(c_pos) else Time.get_ticks_usec()
+	chunk.generate(c_pos, block_size, terrain_amplitude, noise_large, noise_small, block_scene, _fill_mesh, _fill_mat_dirt, perf_debug_enabled, perf_spike_threshold_ms, queue_enter_us, perf_stage_log_threshold_ms)
+	_loading_chunks[c_pos] = chunk
+	return chunk
+
+
+func _log_queue_age_stats_if_needed() -> void:
+	if not perf_debug_enabled or not perf_log_queue_age_stats:
+		return
+
+	var now_us: int = Time.get_ticks_usec()
+	if now_us - _last_queue_age_log_us < 1_000_000:
+		return
+	_last_queue_age_log_us = now_us
+
+	if _load_queue.is_empty():
+		return
+
+	var min_age_ms: float = 999999.0
+	var max_age_ms: float = 0.0
+	var total_age_ms: float = 0.0
+	var count: int = 0
+	for c_pos in _load_queue:
+		if not _queue_enter_us.has(c_pos):
+			continue
+		var enter_us: int = _queue_enter_us[c_pos] as int
+		var age_ms: float = (now_us - enter_us) / 1000.0
+		min_age_ms = min(min_age_ms, age_ms)
+		max_age_ms = max(max_age_ms, age_ms)
+		total_age_ms += age_ms
+		count += 1
+
+	if count > 0:
+		var avg_age_ms: float = total_age_ms / float(count)
+		print("[ChunkPerf] queue_age queued=%d min=%.2fms avg=%.2fms max=%.2fms" % [count, min_age_ms, avg_age_ms, max_age_ms])
 
 func _build_fill_resources() -> void:
 	_fill_mesh = BoxMesh.new()
