@@ -62,6 +62,7 @@ const _AUDIO_POOL_SIZE = 6
 var _sfx_pool: Array[AudioStreamPlayer] = []
 var _sfx_pool_idx: int = 0
 var _spawn_ready: bool = false
+var _place_input_held: bool = false
 
 
 func _snap_to_grid(pos: Vector3) -> Vector3:
@@ -212,8 +213,11 @@ func _unhandled_input(event):
 		$Head.rotate_x(-event.relative.y * mouse_sensitivity)
 		$Head.rotation.x = clamp($Head.rotation.x, -deg_to_rad(80), deg_to_rad(80))
 
-	if event.is_action_pressed("right_click"):
+	if event.is_action_pressed("right_click") and not _place_input_held:
+		_place_input_held = true
 		place_block()
+	elif event.is_action_released("right_click"):
+		_place_input_held = false
 
 	# Inventory slot selection — keyboard 1-9 → slots 0-8, key 0 → slot 9
 	var slot_keys = ["slot_1","slot_2","slot_3","slot_4","slot_5","slot_6","slot_7","slot_8","slot_9","slot_0"]
