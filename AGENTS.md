@@ -20,9 +20,10 @@
 | File | Purpose |
 |------|---------|
 | [player.gd](player.gd) | FPS controller, block mining/placement, inventory management, shared raycasting, and audio pooling |
-| [ground_generator.gd](ground_generator.gd) | Procedural 3D noise terrain generation, block-face occlusion checks, MultiMesh rendering, and dynamic StaticBody3D promotion |
+| [ground_generator.gd](ground_generator.gd) | Infinite Chunk Manager tracking player position to dynamically spawn and despawn `TerrainChunk` instances |
+| [terrain_chunk.gd](terrain_chunk.gd) | Individual 16x16 chunk instances processing local 3D noise terrain, tree instantiation, and internal MultiMesh generation |
 | [inventory_hud.gd](inventory_hud.gd) | Pre-allocates StyleBoxFlats and manages UI grid for the 10-slot inventory tracking |
-| [pause_menu.gd](pause_menu.gd) | Settings UI (resolution, fullscreen, FPS cap), game pause state |
+| [pause_menu.gd](pause_menu.gd) | Settings UI (render distance slider, resolution, fullscreen, FPS cap), game pause state |
 | [birch_tree.gd](birch_tree.gd) | Generates birch tree meshes dynamically above terrain |
 | [dust_cloud.gd](dust_cloud.gd) | Particle effect spawned on block manipulation |
 
@@ -30,7 +31,8 @@
 
 | File | Purpose |
 |------|---------|
-| [main.tscn](main.tscn) | Root scene: player, terrain nodes, trees, UI, block container |
+| [main.tscn](main.tscn) | Root scene: player, Chunk Manager, UI, block container |
+| [terrain_chunk.tscn](terrain_chunk.tscn) | (Usually instantiated by script `terrain_chunk.gd`) |
 | [brick.tscn](brick.tscn) | Standard player-placed brick prefab (Root: StaticBody3D with metadata) |
 | [ground_block.tscn](ground_block.tscn) | Generated terrain block with shader material for grass/dirt mapping |
 | [birch_tree.tscn](birch_tree.tscn) | Tree prefab with optimized mesh collision generation |
@@ -56,7 +58,9 @@
 5. **Metadata Tagging**: All interactive bodies utilize .set_meta("hp") and .set_meta("block_type") logic embedded to dictate inventory interactions over class_name dependencies.
 
 ### Recent Changes
-- **Occlusion/Fill Optimization**: Implemented run-time adjacent block checking. When blocks are grouped or sealed, they migrate from physics space to visual-only _fill_mmi.
+- **Infinite Chunk Management**: Replaced standard static global terrain mesh with an infinite dynamic chunk loading framework scaling radially according to the Pause Menu Render Distance slider.
+- **Dynamic Tree Instantiation**: Refactored static `BirchTree` elements from the scene tree into procedural noise probabilities driven autonomously inside `terrain_chunk.gd`. Erased duplicated/overlapping prefab bug.
+- **Occlusion/Fill Optimization**: Implemented run-time adjacent block checking. When blocks are grouped or sealed, they migrate from physics space to visual-only _fill_mmi. This logic is now efficiently localized inside individual `TerrainChunk` instances.
 - **Inventory Integration**: Replaced basic color cycling with real resource picking (wood vs ground_block).
 - **Physics Model Refactoring**: Rebuilt rick.tscn to ensure StaticBody3D acts as the root node to flawlessly catch pickaxe raycasts.
 - **Audio Tuning**: Handled footprint interval and multi-pitch sampling logic to accompany hit_timer based digging rhythms.
@@ -110,5 +114,4 @@
 
 ## Future Enhancements
 - Save/Load mechanism for chunk modifications.
-- Implementing an infinite chunk-loading treadmill system around player.global_position.
 - Greedy Networking logic for multiplayer modifications.
