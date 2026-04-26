@@ -1,5 +1,7 @@
 extends Node3D
 
+signal initial_generation_complete
+
 @export var block_size: float = 0.5
 @export var block_scene: PackedScene = preload("res://ground_block.tscn")
 @export var terrain_amplitude: int = 8
@@ -40,6 +42,7 @@ var _queue_enter_us: Dictionary = {}
 var _queue_sort_origin: Vector2i = Vector2i.ZERO
 # Perf telemetry context: cadence gate for queue-age summary logs.
 var _last_queue_age_log_us: int = 0
+var _initial_generation_complete: bool = false
 
 func _ready() -> void:
 	if has_node("../Player"):
@@ -110,6 +113,10 @@ func _update_chunks() -> void:
 			loading_chunk.queue_free()
 		_loading_chunks.erase(c_pos)
 		_queue_enter_us.erase(c_pos)
+
+	if not _initial_generation_complete and _is_active_area_ready(active_chunks_lookup):
+		_initial_generation_complete = true
+		emit_signal("initial_generation_complete")
 
 	_log_queue_age_stats_if_needed()
 
@@ -207,9 +214,29 @@ func _process_load_queue() -> Dictionary:
 		"budget_hit": budget_hit
 	}
 
+
+func _is_active_area_ready(active_chunks_lookup: Dictionary) -> bool:
+	for c_pos_variant in active_chunks_lookup.keys():
+		var c_pos: Vector2i = c_pos_variant as Vector2i
+		if not _chunks.has(c_pos):
+			return false
+	return true
+
 func _get_chunk_pos_from_world(world_pos: Vector3) -> Vector2i:
 	var grid_pos: Vector3i = _get_grid_pos_from_world(world_pos)
 	return Vector2i(floor(float(grid_pos.x) / 16.0), floor(float(grid_pos.z) / 16.0))
+
+
+func is_initial_generation_complete() -> bool:
+	return _initial_generation_complete
+
+
+func get_height_at(world_x: float, world_z: float) -> float:
+	if noise_large == null or noise_small == null:
+		return 0.0
+	var n: float = noise_large.get_noise_2d(world_x, world_z) * 0.7 + noise_small.get_noise_2d(world_x, world_z) * 0.3
+	var height_blocks: int = int(round(n * terrain_amplitude))
+	return height_blocks * block_size
 
 func _get_or_create_loading_chunk(c_pos: Vector2i) -> TerrainChunk:
 	if _loading_chunks.has(c_pos):

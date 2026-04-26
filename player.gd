@@ -61,6 +61,7 @@ var _frame_ray: Dictionary = {}
 const _AUDIO_POOL_SIZE = 6
 var _sfx_pool: Array[AudioStreamPlayer] = []
 var _sfx_pool_idx: int = 0
+var _spawn_ready: bool = false
 
 
 func _snap_to_grid(pos: Vector3) -> Vector3:
@@ -135,6 +136,9 @@ func consume_from_slot() -> String:
 
 
 func _ready():
+	set_physics_process(false)
+	set_process_input(false)
+	set_process_unhandled_input(false)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	inventory.resize(SLOT_COUNT)
 	for i in SLOT_COUNT:
@@ -148,11 +152,35 @@ func _ready():
 		add_child(p)
 		_sfx_pool.append(p)
 	was_on_floor_last_frame = is_on_floor()
-	# Snap spawn position above terrain surface
 	var ground_gen = get_parent().get_node_or_null("GroundGenerator")
+	if ground_gen and ground_gen.has_signal("initial_generation_complete"):
+		if ground_gen.has_method("is_initial_generation_complete") and ground_gen.is_initial_generation_complete():
+			_activate_after_ground_ready(ground_gen)
+		else:
+			ground_gen.connect("initial_generation_complete", Callable(self, "_on_initial_generation_complete"), CONNECT_ONE_SHOT)
+	else:
+		_activate_player()
+
+
+func _on_initial_generation_complete() -> void:
+	var ground_gen = get_parent().get_node_or_null("GroundGenerator")
+	_activate_after_ground_ready(ground_gen)
+
+
+func _activate_after_ground_ready(ground_gen: Node) -> void:
 	if ground_gen and ground_gen.has_method("get_height_at"):
-		var terrain_y = ground_gen.get_height_at(global_position.x, global_position.z)
+		var terrain_y: float = ground_gen.get_height_at(global_position.x, global_position.z)
 		global_position.y = terrain_y + 2.0
+	_activate_player()
+
+
+func _activate_player() -> void:
+	if _spawn_ready:
+		return
+	_spawn_ready = true
+	set_physics_process(true)
+	set_process_input(true)
+	set_process_unhandled_input(true)
 
 
 func _input(event: InputEvent) -> void:
