@@ -2,15 +2,26 @@ extends ColorRect
 
 var resolutions: Dictionary = {
 	0: Vector2i(1280, 720),
-	1: Vector2i(1920, 1080),
-	2: Vector2i(2560, 1440),
-	3: Vector2i(3840, 2160),
+	1: Vector2i(1280, 800),
+	2: Vector2i(1920, 1080),
+	3: Vector2i(2560, 1440),
+	4: Vector2i(3840, 2160),
 }
+
+const LINUX_DEFAULT_RESOLUTION := Vector2i(1280, 800)
+const NON_LINUX_DEFAULT_RESOLUTION := Vector2i(1920, 1080)
+const LINUX_DEFAULT_FPS := 40
+const NON_LINUX_DEFAULT_FPS := 60
 
 @onready var res_button = $SettingsPage/ResolutionRow/ResolutionButton
 @onready var fps_button = $SettingsPage/FpsRow/FpsButton
 @onready var render_distance_slider = $SettingsPage/RenderDistanceRow/RenderDistanceSlider
 @onready var render_distance_label = $SettingsPage/RenderDistanceRow/Label
+@onready var sdfgi_toggle = $SettingsPage/SdfgiToggle
+@onready var ssao_toggle = $SettingsPage/SsaoToggle
+@onready var ssil_toggle = $SettingsPage/SsilToggle
+@onready var fog_toggle = $SettingsPage/FogToggle
+@onready var shadows_toggle = $SettingsPage/ShadowsToggle
 @onready var main_buttons = $MainButtons
 @onready var settings_page = $SettingsPage
 @onready var continue_button = $MainButtons/ContinueButton
@@ -20,18 +31,8 @@ var resolutions: Dictionary = {
 
 func _ready():
 	hide()
-	
-	# 1. Set the visual state of the dropdown (Index 1 is 1920x1080)
-	res_button.selected = 1
-	
-	# 2. Apply the resolution immediately so the game starts at 1080p
-	# Using the safe internal scaling method we discussed
-	var default_res = resolutions[1]
-	get_viewport().set_content_scale_size(default_res)
-
-	# 3. Set the FPS cap dropdown default to 60
-	fps_button.selected = 1
-	set_max_fps_from_button()
+	_set_startup_defaults()
+	_sync_graphics_toggles_from_environment()
 	
 	# Safety check: Only connect if the button was actually found
 	if res_button:
@@ -47,6 +48,94 @@ func _ready():
 	# Start with settings hidden
 	settings_page.hide()
 	main_buttons.show()
+
+
+func _set_startup_defaults() -> void:
+	if _is_linux_platform():
+		_set_resolution_by_value(LINUX_DEFAULT_RESOLUTION)
+		_set_fps_by_value(LINUX_DEFAULT_FPS)
+		_set_graphics_defaults(false)
+	else:
+		_set_resolution_by_value(NON_LINUX_DEFAULT_RESOLUTION)
+		_set_fps_by_value(NON_LINUX_DEFAULT_FPS)
+
+
+func _is_linux_platform() -> bool:
+	return OS.get_name().to_lower().find("linux") != -1
+
+
+func _set_resolution_by_value(resolution: Vector2i) -> void:
+	var index := _find_resolution_index(resolution)
+	if index == -1:
+		return
+	res_button.selected = index
+	_apply_resolution(resolution)
+
+
+func _find_resolution_index(resolution: Vector2i) -> int:
+	for index in resolutions.keys():
+		if resolutions[index] == resolution:
+			return index
+	return -1
+
+
+func _set_fps_by_value(fps: int) -> void:
+	var index := _find_option_index_by_text(fps_button, str(fps))
+	if index == -1:
+		return
+	fps_button.selected = index
+	set_max_fps_from_button()
+
+
+func _find_option_index_by_text(button: OptionButton, text: String) -> int:
+	for i in range(button.item_count):
+		if button.get_item_text(i) == text:
+			return i
+	return -1
+
+
+func _set_graphics_defaults(enabled: bool) -> void:
+	sdfgi_toggle.button_pressed = enabled
+	ssao_toggle.button_pressed = enabled
+	ssil_toggle.button_pressed = enabled
+	fog_toggle.button_pressed = enabled
+	shadows_toggle.button_pressed = enabled
+	_apply_graphics_from_toggles()
+
+
+func _sync_graphics_toggles_from_environment() -> void:
+	var world_env := _get_world_environment()
+	if world_env and world_env.environment:
+		sdfgi_toggle.button_pressed = world_env.environment.sdfgi_enabled
+		ssao_toggle.button_pressed = world_env.environment.ssao_enabled
+		ssil_toggle.button_pressed = world_env.environment.ssil_enabled
+		fog_toggle.button_pressed = world_env.environment.fog_enabled
+
+	var light := _get_directional_light()
+	if light:
+		shadows_toggle.button_pressed = light.shadow_enabled
+
+
+func _apply_graphics_from_toggles() -> void:
+	_on_sdfgi_toggle_toggled(sdfgi_toggle.button_pressed)
+	_on_ssao_toggle_toggled(ssao_toggle.button_pressed)
+	_on_ssil_toggle_toggled(ssil_toggle.button_pressed)
+	_on_fog_toggle_toggled(fog_toggle.button_pressed)
+	_on_shadows_toggle_toggled(shadows_toggle.button_pressed)
+
+
+func _get_world_environment() -> WorldEnvironment:
+	var scene := get_tree().current_scene
+	if scene and scene.has_node("WorldEnvironment"):
+		return scene.get_node("WorldEnvironment") as WorldEnvironment
+	return null
+
+
+func _get_directional_light() -> DirectionalLight3D:
+	var scene := get_tree().current_scene
+	if scene and scene.has_node("DirectionalLight3D"):
+		return scene.get_node("DirectionalLight3D") as DirectionalLight3D
+	return null
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -117,16 +206,48 @@ func _on_fullscreen_toggle_toggled(toggled_on: bool):
 
 
 func _on_resolution_selected(index: int):
-	# 1. Get the resolution from our dictionary
-	var size = resolutions[index]
+	var size = resolutions.get(index, Vector2i(1280, 720))
+	_apply_resolution(size, true)
 
-	# 2. Tell the DisplayServer to change the window size
+
+func _apply_resolution(size: Vector2i, center_window: bool = false) -> void:
+	get_viewport().set_content_scale_size(size)
 	DisplayServer.window_set_size(size)
 
-	# 3. Center the window on the screen after resizing
-	var screen_center = DisplayServer.screen_get_position() + (DisplayServer.screen_get_size() / 2)
-	var window_pos = screen_center - (size / 2)
-	DisplayServer.window_set_position(window_pos)
+	if center_window:
+		var screen_center = DisplayServer.screen_get_position() + (DisplayServer.screen_get_size() / 2)
+		var window_pos = screen_center - (size / 2)
+		DisplayServer.window_set_position(window_pos)
+
+
+func _on_sdfgi_toggle_toggled(toggled_on: bool) -> void:
+	var world_env := _get_world_environment()
+	if world_env and world_env.environment:
+		world_env.environment.sdfgi_enabled = toggled_on
+
+
+func _on_ssao_toggle_toggled(toggled_on: bool) -> void:
+	var world_env := _get_world_environment()
+	if world_env and world_env.environment:
+		world_env.environment.ssao_enabled = toggled_on
+
+
+func _on_ssil_toggle_toggled(toggled_on: bool) -> void:
+	var world_env := _get_world_environment()
+	if world_env and world_env.environment:
+		world_env.environment.ssil_enabled = toggled_on
+
+
+func _on_fog_toggle_toggled(toggled_on: bool) -> void:
+	var world_env := _get_world_environment()
+	if world_env and world_env.environment:
+		world_env.environment.fog_enabled = toggled_on
+
+
+func _on_shadows_toggle_toggled(toggled_on: bool) -> void:
+	var light := _get_directional_light()
+	if light:
+		light.shadow_enabled = toggled_on
 
 func toggle_pause(show_mouse_cursor: bool = true):
 	var new_pause_state = !get_tree().paused
