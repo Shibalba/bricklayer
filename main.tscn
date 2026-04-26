@@ -1,8 +1,6 @@
 [gd_scene format=3 uid="uid://wmgvhlnv7t58"]
 
-[ext_resource type="Texture2D" uid="uid://d23qoc2cy53a2" path="res://Terrain11_img.jpg" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://dk8pns77uwlff" path="res://player.gd" id="1_ig7tw"]
-[ext_resource type="Texture2D" uid="uid://buabfdshtghnl" path="res://Terrain12_img.jpg" id="2_1bvp3"]
 [ext_resource type="Script" uid="uid://505lvloaswbs" path="res://pause_menu.gd" id="3_h2yge"]
 [ext_resource type="Script" uid="uid://bqqx83a7di8v8" path="res://controls_overlay.gd" id="4_1x8sf"]
 [ext_resource type="PackedScene" path="res://birch_tree.tscn" id="5_2d8qk"]
@@ -31,16 +29,6 @@ add_uv2 = true
 size = Vector3(50, 1, 50)
 
 [sub_resource type="NoiseTexture2D" id="NoiseTexture2D_h2yge"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_h2yge"]
-albedo_texture = ExtResource("1_0xm2m")
-detail_enabled = true
-detail_mask = SubResource("NoiseTexture2D_h2yge")
-detail_uv_layer = 1
-detail_albedo = ExtResource("2_1bvp3")
-uv1_scale = Vector3(50, 50, 50)
-uv1_triplanar = true
-uv2_scale = Vector3(150, 150, 150)
 
 [sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_ig7tw"]
 points = PackedVector3Array(-25, -0.25, -25, -25, 0.25, -25, 25, -0.25, -25, -25, -0.25, 25, -25, 0.25, 25, 25, 0.25, -25, 25, -0.25, 25, 25, 0.25, 25)

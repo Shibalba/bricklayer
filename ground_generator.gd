@@ -59,7 +59,7 @@ func _ready() -> void:
 	noise_small.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 	noise_small.frequency = 0.15
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	if not _player:
 		return
 	_update_chunks()

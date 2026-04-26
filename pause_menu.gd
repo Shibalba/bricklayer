@@ -216,20 +216,23 @@ func _on_fullscreen_toggle_toggled(toggled_on: bool):
 
 
 func _on_resolution_selected(index: int):
-	var size = resolutions.get(index, Vector2i(1280, 720))
-	_apply_resolution(size, true)
+	var resolution_size = resolutions.get(index, Vector2i(1280, 720))
+	_apply_resolution(resolution_size, true)
 
 
-func _apply_resolution(size: Vector2i, center_window: bool = false) -> void:
-	get_viewport().set_content_scale_size(size)
+func _apply_resolution(resolution_size: Vector2i, center_window: bool = false) -> void:
+	get_viewport().set_content_scale_size(resolution_size)
 	if _is_web_platform():
 		return
 
-	DisplayServer.window_set_size(size)
+	DisplayServer.window_set_size(resolution_size)
 
 	if center_window:
-		var screen_center = DisplayServer.screen_get_position() + (DisplayServer.screen_get_size() / 2)
-		var window_pos = screen_center - (size / 2)
+		var screen_pos: Vector2i = DisplayServer.screen_get_position()
+		var screen_size: Vector2i = DisplayServer.screen_get_size()
+		var screen_center: Vector2 = Vector2(screen_pos) + Vector2(screen_size) * 0.5
+		var window_half: Vector2 = Vector2(resolution_size) * 0.5
+		var window_pos: Vector2i = Vector2i(screen_center - window_half)
 		DisplayServer.window_set_position(window_pos)
 
 

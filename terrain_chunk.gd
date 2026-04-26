@@ -131,7 +131,6 @@ func _stage_noise() -> void:
 
 
 func _stage_surface_and_trees() -> void:
-	var stage_start_us: int = Time.get_ticks_usec()
 	for xi in range(CHUNK_SIZE):
 		for zi in range(CHUNK_SIZE):
 			var world_x: float = _start_x + xi * block_size
@@ -194,7 +193,7 @@ func _log_stage_if_needed(stage_name: String, stage_us: int) -> void:
 func _height_index(xi: int, zi: int) -> int:
 	return xi * CHUNK_SIZE + zi
 
-func on_block_placed(snapped_pos: Vector3, placed_grid_pos: Vector3i, player_bricks_node: Node3D) -> void:
+func on_block_placed(_snapped_pos: Vector3, placed_grid_pos: Vector3i, player_bricks_node: Node3D) -> void:
 	var adjacent_offsets = [
 		Vector3i(0, -1, 0),
 		Vector3i(0, 1, 0),
@@ -239,7 +238,7 @@ func on_block_placed(snapped_pos: Vector3, placed_grid_pos: Vector3i, player_bri
 	if multimesh_needs_rebuild:
 		_rebuild_fill_multimesh()
 
-func on_block_removed(world_pos: Vector3, grid_pos: Vector3i) -> void:
+func on_block_removed(_world_pos: Vector3, grid_pos: Vector3i) -> void:
 	_surface_blocks.erase(grid_pos)
 
 	var adjacent_offsets = [
