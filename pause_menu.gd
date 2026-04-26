@@ -12,6 +12,8 @@ const LINUX_DEFAULT_RESOLUTION := Vector2i(1280, 800)
 const NON_LINUX_DEFAULT_RESOLUTION := Vector2i(1920, 1080)
 const LINUX_DEFAULT_FPS := 40
 const NON_LINUX_DEFAULT_FPS := 60
+const WEB_DEFAULT_RESOLUTION := Vector2i(1280, 720)
+const WEB_DEFAULT_FPS := 30
 
 @onready var res_button = $SettingsPage/ResolutionRow/ResolutionButton
 @onready var fps_button = $SettingsPage/FpsRow/FpsButton
@@ -51,13 +53,21 @@ func _ready():
 
 
 func _set_startup_defaults() -> void:
-	if _is_linux_platform():
+	if _is_web_platform():
+		_set_resolution_by_value(WEB_DEFAULT_RESOLUTION)
+		_set_fps_by_value(WEB_DEFAULT_FPS)
+		_set_graphics_defaults(false)
+	elif _is_linux_platform():
 		_set_resolution_by_value(LINUX_DEFAULT_RESOLUTION)
 		_set_fps_by_value(LINUX_DEFAULT_FPS)
 		_set_graphics_defaults(false)
 	else:
 		_set_resolution_by_value(NON_LINUX_DEFAULT_RESOLUTION)
 		_set_fps_by_value(NON_LINUX_DEFAULT_FPS)
+
+
+func _is_web_platform() -> bool:
+	return OS.has_feature("web")
 
 
 func _is_linux_platform() -> bool:
@@ -212,6 +222,9 @@ func _on_resolution_selected(index: int):
 
 func _apply_resolution(size: Vector2i, center_window: bool = false) -> void:
 	get_viewport().set_content_scale_size(size)
+	if _is_web_platform():
+		return
+
 	DisplayServer.window_set_size(size)
 
 	if center_window:
