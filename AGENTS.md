@@ -64,6 +64,9 @@
 - **Inventory Integration**: Replaced basic color cycling with real resource picking (wood vs ground_block).
 - **Physics Model Refactoring**: Rebuilt rick.tscn to ensure StaticBody3D acts as the root node to flawlessly catch pickaxe raycasts.
 - **Audio Tuning**: Handled footprint interval and multi-pitch sampling logic to accompany hit_timer based digging rhythms.
+- **Staged Chunk Generation Queue**: `ground_generator.gd` now drives chunk creation through a queue and per-frame budget instead of full immediate generation, and `terrain_chunk.gd` advances chunk creation in explicit stages (noise, surface/trees, fill, mesh).
+- **Chunk Performance Telemetry**: Added debug-gated frame telemetry (processed steps, requeues, budget-hit, queue depth, frame-over-budget), chunk compute/latency reporting, and optional queue-age and per-stage threshold logs for deep-dive profiling.
+- **Cross-Platform Settings/Export Updates**: Added Linux export preset support, Steam Deck-oriented defaults, Web-specific startup defaults and browser-safe resolution behavior, plus expanded graphics/runtime controls in the pause menu.
 
 ---
 

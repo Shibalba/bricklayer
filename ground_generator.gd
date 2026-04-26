@@ -5,14 +5,21 @@ extends Node3D
 @export var terrain_amplitude: int = 8
 @export var noise_seed: int = 42
 @export var render_distance: int = 2
+# Perf test control: per-frame chunk generation budget in milliseconds.
 @export var chunk_load_budget_ms: float = 6.0
+# Perf test control: max chunk generation steps processed each frame.
 @export var max_chunks_loaded_per_frame: int = 2
 @export var max_chunks_unloaded_per_frame: int = 3
-@export var perf_debug_enabled: bool = true
+# Perf test control: master switch for chunk performance telemetry.
+@export var perf_debug_enabled: bool = false
+# Perf test control: spike threshold used by frame/chunk log emitters.
 @export var perf_spike_threshold_ms: float = 12.0
+# Perf test control: frame-time budget target for over-budget logging.
 @export var perf_frame_budget_target_ms: float = 16.6
+# Perf test control: enables periodic queue-age telemetry.
 @export var perf_log_queue_age_stats: bool = true
-@export var perf_stage_log_threshold_ms: float = 2.0
+# Perf test control: stage log threshold forwarded to TerrainChunk.
+@export var perf_stage_log_threshold_ms: float = 2.5
 
 @onready var blocks = $Blocks
 var chunk_scene = preload("res://terrain_chunk.gd")
@@ -23,11 +30,15 @@ var _fill_mat_dirt: StandardMaterial3D
 var noise_large: FastNoiseLite
 var noise_small: FastNoiseLite
 var _player: Node3D
+# Perf telemetry context: chunks currently in staged generation.
 var _loading_chunks: Dictionary = {}
+# Perf telemetry context: chunk work queue consumed under budget limits.
 var _load_queue: Array[Vector2i] = []
 var _queued_lookup: Dictionary = {}
+# Perf telemetry context: queue enter timestamps for latency/age metrics.
 var _queue_enter_us: Dictionary = {}
 var _queue_sort_origin: Vector2i = Vector2i.ZERO
+# Perf telemetry context: cadence gate for queue-age summary logs.
 var _last_queue_age_log_us: int = 0
 
 func _ready() -> void:

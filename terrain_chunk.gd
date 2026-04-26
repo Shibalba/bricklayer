@@ -18,19 +18,28 @@ var _fill_mmi: MultiMeshInstance3D
 var _start_x: float
 var _start_z: float
 var tree_scene = preload("res://birch_tree.tscn")
+# Perf test control: enables per-stage generation logs.
 var _perf_debug_enabled: bool = false
+# Perf test control: spike threshold shared with generator logs.
 var _perf_spike_threshold_ms: float = 12.0
 var _generation_stage: int = 0
 var _generation_complete: bool = false
 var _heights: PackedInt32Array = PackedInt32Array()
 var _chunk_start_us: int = 0
+# Perf telemetry: accumulated noise stage time.
 var _noise_us: int = 0
+# Perf telemetry: accumulated surface block stage time.
 var _surface_us: int = 0
+# Perf telemetry: accumulated tree generation time.
 var _tree_us: int = 0
+# Perf telemetry: accumulated fill stage time.
 var _fill_us: int = 0
+# Perf telemetry: accumulated mesh rebuild stage time.
 var _mesh_us: int = 0
 var _tree_count: int = 0
+# Perf telemetry: queue-enter timestamp for end-to-end chunk latency.
 var _queue_enter_us: int = 0
+# Perf test control: minimum stage time required to emit a stage log.
 var _stage_log_threshold_ms: float = 2.0
 
 enum GenerationStage {
@@ -89,7 +98,6 @@ func process_generation_step() -> bool:
 			_stage_mesh()
 			_generation_stage = GenerationStage.READY
 			_generation_complete = true
-			_log_generation_summary_if_needed()
 		GenerationStage.READY:
 			_generation_complete = true
 
@@ -173,28 +181,6 @@ func _stage_mesh() -> void:
 	_rebuild_fill_multimesh()
 	_mesh_us += Time.get_ticks_usec() - stage_start_us
 	_log_stage_if_needed("mesh", _mesh_us)
-
-
-func _log_generation_summary_if_needed() -> void:
-	if not _perf_debug_enabled:
-		return
-
-	var compute_ms: float = get_compute_ms()
-	var latency_ms: float = get_latency_ms()
-	if compute_ms < _perf_spike_threshold_ms and latency_ms < _perf_spike_threshold_ms:
-		return
-
-	print("[ChunkPerf] chunk=%s compute=%.2fms latency=%.2fms noise=%.2fms surface=%.2fms trees=%.2fms fill=%.2fms mesh=%.2fms trees=%d" % [
-		str(chunk_pos),
-		compute_ms,
-		latency_ms,
-		_noise_us / 1000.0,
-		_surface_us / 1000.0,
-		_tree_us / 1000.0,
-		_fill_us / 1000.0,
-		_mesh_us / 1000.0,
-		_tree_count
-	])
 
 
 func _log_stage_if_needed(stage_name: String, stage_us: int) -> void:
