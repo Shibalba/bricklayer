@@ -18,4 +18,4 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _update_text() -> void:
 	keyboard_label.text = "W / A / S / D  - Move\nMouse  - Look\nSpace  - Jump\nLeft Click  - Harvest / Remove Block\nRight Click  - Place Block\n1-9 / 0  - Select Inventory Slot\nEsc  - Pause Menu\nF1  - Toggle Controls Help"
-	gamepad_label.text = "Left Stick  - Move\nRight Stick  - Look\nA  - Jump / Menu Select\nLT  - Harvest / Remove Block\nRT  - Place Block\nLB / RB  - Cycle Inventory Slot\nStart  - Pause Menu\nD-Pad Up/Down  - Menu Navigate\nB  - Back / Close Menu\nF1 (Keyboard)  - Toggle Controls Help"
+	gamepad_label.text = "Left Stick  - Move\nRight Stick  - Look\nA  - Jump / Menu Select\nLT  - Place Block\nRT  - Harvest / Remove Block\nLB / RB  - Cycle Inventory Slot\nStart  - Pause Menu\nD-Pad Up/Down  - Menu Navigate\nB  - Back / Close Menu\nF1 (Keyboard)  - Toggle Controls Help"
