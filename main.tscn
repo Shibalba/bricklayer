@@ -168,36 +168,6 @@ script = ExtResource("6_e1t97")
 
 [node name="Blocks" type="Node3D" parent="GroundGenerator" unique_id=1267028084]
 
-[node name="BirchTreeA" parent="." unique_id=500066435 instance=ExtResource("5_2d8qk")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 8)
-
-[node name="BirchTreeB" parent="." unique_id=1265334508 instance=ExtResource("5_2d8qk")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, 6)
-
-[node name="BirchTreeC" parent="." unique_id=1831927946 instance=ExtResource("5_2d8qk")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, -9)
-
-[node name="BirchTreeD" parent="." unique_id=252883719 instance=ExtResource("5_2d8qk")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0, -12)
-
-[node name="BirchTreeE" parent="." unique_id=300000001 instance=ExtResource("5_2d8qk")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, 3)
-
-[node name="BirchTreeF" parent="." unique_id=300000002 instance=ExtResource("5_2d8qk")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, 15)
-
-[node name="BirchTreeG" parent="." unique_id=300000003 instance=ExtResource("5_2d8qk")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, -20)
-
-[node name="BirchTreeH" parent="." unique_id=300000004 instance=ExtResource("5_2d8qk")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, -18)
-
-[node name="BirchTreeI" parent="." unique_id=300000005 instance=ExtResource("5_2d8qk")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, 0, -14)
-
-[node name="BirchTreeJ" parent="." unique_id=300000006 instance=ExtResource("5_2d8qk")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0, -5)
-
 [node name="Player" type="CharacterBody3D" parent="." unique_id=1941755123]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
 script = ExtResource("1_ig7tw")
@@ -342,6 +312,22 @@ offset_right = 80.0
 offset_bottom = 50.5
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="RenderDistanceRow" type="HBoxContainer" parent="CanvasLayer/PauseMenu/SettingsPage" unique_id=987654321]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CanvasLayer/PauseMenu/SettingsPage/RenderDistanceRow" unique_id=987654322]
+layout_mode = 2
+text = "Render Dst: 2"
+
+[node name="RenderDistanceSlider" type="HSlider" parent="CanvasLayer/PauseMenu/SettingsPage/RenderDistanceRow" unique_id=987654323]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+min_value = 1.0
+max_value = 4.0
+value = 2.0
+tick_count = 4
 
 [node name="ResolutionRow" type="HBoxContainer" parent="CanvasLayer/PauseMenu/SettingsPage" unique_id=43371]
 layout_mode = 2
@@ -766,4 +752,5 @@ surface_material_override/0 = SubResource("ShaderMaterial_1bvp3")
 [connection signal="pressed" from="CanvasLayer/PauseMenu/MainButtons/RestartButton" to="CanvasLayer/PauseMenu" method="_on_restart_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/PauseMenu/MainButtons/QuitButton" to="CanvasLayer/PauseMenu" method="_on_quit_button_pressed"]
 [connection signal="toggled" from="CanvasLayer/PauseMenu/SettingsPage/FullscreenToggle" to="CanvasLayer/PauseMenu" method="_on_fullscreen_toggle_toggled"]
+[connection signal="value_changed" from="CanvasLayer/PauseMenu/SettingsPage/RenderDistanceRow/RenderDistanceSlider" to="CanvasLayer/PauseMenu" method="_on_render_distance_value_changed"]
 [connection signal="pressed" from="CanvasLayer/PauseMenu/SettingsPage/BackButton" to="CanvasLayer/PauseMenu" method="_on_back_button_pressed"]

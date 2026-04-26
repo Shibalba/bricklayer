@@ -9,6 +9,8 @@ var resolutions: Dictionary = {
 
 @onready var res_button = $SettingsPage/ResolutionRow/ResolutionButton
 @onready var fps_button = $SettingsPage/FpsRow/FpsButton
+@onready var render_distance_slider = $SettingsPage/RenderDistanceRow/RenderDistanceSlider
+@onready var render_distance_label = $SettingsPage/RenderDistanceRow/Label
 @onready var main_buttons = $MainButtons
 @onready var settings_page = $SettingsPage
 @onready var continue_button = $MainButtons/ContinueButton
@@ -159,3 +161,9 @@ func _on_restart_button_pressed():
 
 	# 2. Reload the scene (this clears the Bricks folder automatically)
 	get_tree().reload_current_scene()
+
+func _on_render_distance_value_changed(value: float):
+	render_distance_label.text = "Render Dst: %d" % int(value)
+	var ground_generator = get_tree().current_scene.get_node("GroundGenerator")
+	if ground_generator:
+		ground_generator.render_distance = int(value)
